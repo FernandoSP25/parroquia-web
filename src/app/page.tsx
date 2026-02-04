@@ -179,7 +179,7 @@ export default function Home() {
           <div className="absolute inset-0 z-0 bg-black">
             {heroImages.map((img, index) => (
               <div key={index} className={`absolute inset-0 transition-opacity duration-[1500ms] ease-in-out ${index === currentImage ? "opacity-100" : "opacity-0"}`}>
-                <Image src={img} alt={`Hero ${index}`} fill priority={index === 0} className="object-cover scale-105" />
+                <Image src={img} alt={`Hero ${index}`} fill priority={index === 0} className="object-cover scale-105" unoptimized />
               </div>
             ))}
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80" />
