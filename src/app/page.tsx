@@ -25,7 +25,7 @@ export default function Home() {
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error', texto: string } | null>(null);
   
   // Carrusel Hero
-  const heroImages = ["/hero/6.jpg", "/hero/1.jpg", "/hero/2.jpg", "/hero/4.jpg"];
+  const heroImages = ["/hero/6.jpg", "/hero/1.jpg", "/hero/2.jpg", "/hero/4.jpg", "/hero/7.jpg"];
   const [currentImage, setCurrentImage] = useState(0);
 
   useEffect(() => {
