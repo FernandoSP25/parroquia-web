@@ -9,11 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
     "axios": "^1.13.3",
+    "invariant": "^2.2.4",
     "lucide-react": "^0.563.0",
     "next": "16.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-photo-sphere-viewer": "^6.2.3",
     "sweetalert2": "^11.26.17"
   },
   "devDependencies": {

@@ -32,9 +32,10 @@ export default function Sidebar() {
       case "ADMIN":
         return [
           { name: "Panel Control", href: "/admin", icon: <LayoutDashboard size={20} /> },
+          { name: "Incripciones", href: "/admin/inscripciones", icon: <UserCheck size={20} /> },
           { name: "Usuarios", href: "/admin/usuarios", icon: <Users size={20} /> },
           { name: "Grupos", href: "/admin/grupos", icon: <Layers size={20} /> },
-          { name: "Eventos", href: "/admin/asistencias", icon: <CalendarDays size={20} /> },
+          { name: "Eventos", href: "/admin/eventos", icon: <CalendarDays size={20} /> },
           { name: "Anuncios", href: "/admin/anuncios", icon: <Megaphone size={20} /> },
           { name: "Auditoría", href: "/admin/auditoria", icon: <ShieldAlert size={20} /> },
         ];

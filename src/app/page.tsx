@@ -4,12 +4,14 @@ import Link from "next/link";
 import {
   MapPin, Clock, Lock, CheckCircle, Users, Heart, Wallet,
   Facebook, Instagram, Youtube, Loader2, Menu, X, Mail,
-  Sparkles, Shirt, AlertCircle
+  Sparkles, Shirt, AlertCircle,MoveHorizontal, Flame, HeartHandshake
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { inscripcionService } from "@/app/services/inscripcion"; 
 import { InscripcionData } from "@/app/types"; // Asegúrate de tener este tipo definido o impórtalo del servicio
+import dynamic from 'next/dynamic';
+
 
 const COLORS = {
   primary: "#5A431C",
@@ -17,6 +19,16 @@ const COLORS = {
   accent: "#C0B1A0",
   bgLight: "#F9F8F6",
 };
+
+const Visor360 = dynamic(() => import('@/components/layout/Visor360'), {
+  ssr: false, 
+  loading: () => (
+    <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center bg-[#EBE5E0]/50 animate-pulse text-[#5A431C]">
+      <Loader2 className="animate-spin mb-2" size={32} />
+      <p className="font-bold text-sm font-serif">Cargando Parroquia en 360°...</p>
+    </div>
+  )
+});
 
 export default function Home() {
   // --- ESTADOS ---
@@ -118,8 +130,13 @@ export default function Home() {
             style={{ WebkitBackdropFilter: "blur(18px)" }}
           >
             <Link href="/" className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full text-white font-bold shadow shrink-0" style={{ backgroundColor: COLORS.primary }}>
-                SJ
+              <div className="relative flex items-center justify-center w-11 h-11 rounded-full shadow-md shrink-0 overflow-hidden border border-[#C0B1A0]/30">
+                <Image 
+                  src="/iconsjmv.jpeg" 
+                  alt="Logo Parroquia San Juan María Vianney" 
+                  fill 
+                  className="object-cover"/* p-1 le da un pequeño respiro al borde */
+                />
               </div>
               <div className="leading-tight">
                 <p className="text-[10px] uppercase tracking-widest font-bold opacity-70">Parroquia</p>
@@ -182,7 +199,7 @@ export default function Home() {
                 <Image src={img} alt={`Hero ${index}`} fill priority={index === 0} className="object-cover scale-105" unoptimized />
               </div>
             ))}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80" />
+            <div className="absolute inset-0 bg-gradient-to-b from-gray/500/50 via-black/30 to-black/70 backdrop-blur-[2px]" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#D1B28A]/10 blur-[120px] rounded-full mix-blend-screen" />
           </div>
 
@@ -230,38 +247,151 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== EXPERIENCIA ===== */}
-        <section id="experiencia" className="py-24 px-6 bg-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#D1B28A]/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
-          <div className="container mx-auto max-w-6xl">
+        {/* ===== VISOR 360° ===== */}
+        <section id="visor-360" className="py-24 px-6 bg-[#F9F8F6]"> {/* Fondo bgLight */}
+          
+          {/* Título opcional (puedes quitarlo si ya tienes uno arriba) */}
+          <div className="text-center mb-12 max-w-2xl mx-auto">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#211814] mb-4">
+              Tour Virtual 360°
+            </h2>
+            <div className="h-1 w-16 bg-[#C0B1A0] mx-auto rounded-full mb-4"></div>
+            <p className="text-gray-600">Conoce el interior de nuestra parroquia deslizando la imagen.</p>
+          </div>
+
+          <div className="rounded-[2.5rem] overflow-hidden shadow-2xl border-[8px] border-white relative group h-[400px] md:h-[600px] max-w-5xl mx-auto ring-1 ring-gray-900/5">
+            
+            <Visor360 imagePath="/360/parroquia360.jpg" />
+            
+            {/* OVERLAY: Viñeta suave en los bordes para dar profundidad */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-transparent to-black/40 flex flex-col items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity duration-700 pointer-events-none z-10">
+              
+              {/* LA ETIQUETA "ARRASTRA PARA EXPLORAR" (Elegante y animada) */}
+              <div className="bg-[#F9F8F6]/95 backdrop-blur-md px-6 py-3.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.15)] border border-[#C0B1A0]/30 flex items-center gap-4 transform transition-all duration-700 group-hover:scale-95 group-hover:translate-y-4">
+                
+                {/* Círculo animado con ícono */}
+                <div className="bg-[#5A431C] text-white p-2.5 rounded-full shadow-inner animate-pulse">
+                  <MoveHorizontal size={20} />
+                </div>
+                
+                {/* Texto estilizado */}
+                <div className="flex flex-col text-left pr-2">
+                  <span className="text-[#211814] font-serif font-bold text-lg leading-none tracking-wide">
+                    Arrastra para explorar
+                  </span>
+                  <span className="text-[#5A431C] text-[10px] font-bold uppercase tracking-widest mt-1">
+                    Vista interactiva
+                  </span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== EXPERIENCIA (UI/UX Premium) ===== */}
+        <section id="experiencia" className="py-24 px-6 bg-[#F9F8F6] relative overflow-hidden">
+          
+          {/* Brillos decorativos de fondo */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#C0B1A0]/10 rounded-full blur-[100px] translate-x-1/3 -translate-y-1/3 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#5A431C]/5 rounded-full blur-[100px] -translate-x-1/3 translate-y-1/3 pointer-events-none" />
+
+          <div className="container mx-auto max-w-6xl relative z-10">
+            
+            {/* Cabecera de la sección */}
             <div className="text-center mb-16 max-w-3xl mx-auto">
-              <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#211814] mb-4">
-                Más que una clase, una <span className="text-[#D1B28A]">aventura</span>
+              <h2 className="font-serif text-4xl md:text-5xl font-bold text-[#211814] mb-6 leading-tight">
+                Más que una clase, <br className="hidden md:block" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5A431C] to-[#C0B1A0]">una experiencia de vida</span>
               </h2>
-              <p className="text-gray-600 leading-relaxed">
-                Olvídate de las charlas aburridas. La confirmación 2026 está diseñada para que hagas amigos, descubras tu propósito y vivas tu fe de una manera totalmente nueva.
+              <p className="text-gray-600 text-lg leading-relaxed">
+                Olvídate de las charlas aburridas. La confirmación 2026 está diseñada para que hagas amigos, descubras tu propósito y vivas tu fe de forma dinámica.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-[#FAF9F6] p-8 rounded-3xl border border-transparent hover:border-[#D1B28A]/30 hover:shadow-xl transition-all duration-300 group">
-                <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-[#D1B28A] mb-6 group-hover:scale-110 transition-transform"><Users size={28} /></div>
-                <h3 className="font-bold text-xl mb-3 text-[#211814]">Nuevos Amigos</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">Conocerás a chicos y chicas de tu edad (14+) con tus mismas inquietudes.</p>
+            {/* CONTENEDOR DE TARJETAS 
+                En móvil: Scroll horizontal deslizable (que "pasen así").
+                En PC: Grid de 3 columnas fijo.
+            */}
+            <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-6 pb-8 md:pb-0 snap-x snap-mandatory custom-scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
+              
+              {[
+                {
+                  id: 1,
+                  titulo: "Amistad en Cristo",
+                  descripcion: "Descubrirás que Jesús no es una figura lejana o un concepto aburrido, sino el amigo más fiel que camina a tu lado. Juntos , aprenderemos a escuchar su voz y seguir sus pasos.",
+                  imagen: "/hero/1.jpg", 
+                  icono: <Users size={24} />,
+                },
+                {
+                  id: 2,
+                  titulo: "Sesiones Dinámicas",
+                  descripcion: "Aprendemos a través del diálogo, juegos, música y reflexión profunda. Cada encuentro es una oportunidad para descubrir algo nuevo.",
+                  imagen: "/hero/2.jpg", // 👈 Cambia esta ruta
+                  icono: <Flame size={24} />,
+                },
+                {
+                  id: 3,
+                  titulo: "Fe en Acción",
+                  descripcion: "No solo escuchamos, actuamos. Viviremos la caridad cristiana ayudando a quienes más lo necesitan a través del servicio comunitario.",
+                  imagen: "/hero/4.jpg", // 👈 Cambia esta ruta
+                  icono: <HeartHandshake size={24} />,
+                }
+              ].map((exp) => (
+                <div 
+                  key={exp.id} 
+                  className="group relative flex-shrink-0 w-[85vw] sm:w-[320px] md:w-auto aspect-[4/5] rounded-[2rem] overflow-hidden shadow-xl cursor-pointer snap-center border border-white/40 bg-[#211814]"
+                >
+                  {/* Imagen de fondo con zoom suave en hover */}
+                  <Image 
+                    src={exp.imagen} 
+                    alt={exp.titulo} 
+                    fill 
+                    className="object-cover transition-transform duration-[800ms] group-hover:scale-110 opacity-90 group-hover:opacity-100" 
+                    unoptimized
+                  />
+                  
+                  {/* Gradiente oscuro para que el texto sea legible (Oscurece un poco más al pasar el mouse) */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#211814] via-[#211814]/40 to-transparent transition-opacity duration-500 opacity-80 group-hover:opacity-95" />
+                  
+                  {/* Contenido de texto que se desliza hacia arriba */}
+                  <div className="absolute inset-0 p-8 flex flex-col justify-end text-white">
+                    <div className="bg-[#F9F8F6]/20 backdrop-blur-md w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-[#F9F8F6] border border-white/20 transform translate-y-4 group-hover:-translate-y-2 transition-transform duration-500">
+                      {exp.icono}
+                    </div>
+                    <h3 className="font-serif text-2xl md:text-3xl font-bold mb-3 transform translate-y-4 group-hover:-translate-y-2 transition-transform duration-500">
+                      {exp.titulo}
+                    </h3>
+                    
+                    {/* La descripción está invisible y aparece al pasar el mouse (En móvil siempre se puede leer con un toque) */}
+                    <div className="overflow-hidden">
+                      <p className="text-[#F9F8F6]/80 text-sm leading-relaxed transform translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out">
+                        {exp.descripcion}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* BANNER INFERIOR: El Requisito (Separado para que destaque) */}
+            <div className="mt-16 bg-white border border-[#C0B1A0]/30 p-6 md:p-8 rounded-3xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 max-w-4xl mx-auto transform transition-transform hover:-translate-y-1 hover:shadow-md">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-[#5A431C]/10 rounded-2xl flex items-center justify-center text-[#5A431C] shrink-0">
+                  <CheckCircle size={32} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-xl text-[#211814]">¿Qué necesitas para empezar?</h3>
+                  <p className="text-gray-500 text-sm mt-1">No pedimos mucho. Solo necesitas tener ganas de aprender y comprometerte con tu fe.</p>
+                </div>
               </div>
-              <div className="bg-[#FAF9F6] p-8 rounded-3xl border border-transparent hover:border-[#D1B28A]/30 hover:shadow-xl transition-all duration-300 group relative">
-                 <div className="absolute top-4 right-4 bg-[#D1B28A] text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Top</div>
-                <div className="w-14 h-14 bg-white rounded-2xl shadow-sm flex items-center justify-center text-[#D1B28A] mb-6 group-hover:scale-110 transition-transform"><Heart size={28} /></div>
-                <h3 className="font-bold text-xl mb-3 text-[#211814]">Retiros Espirituales</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">Vive fines de semana inolvidables llenos de música, dinámicas y encuentro con Dios.</p>
-              </div>
-              <div className="bg-[#211814] p-8 rounded-3xl border border-gray-800 text-white hover:shadow-xl transition-all duration-300 group">
-                <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-[#D1B28A] mb-6 group-hover:scale-110 transition-transform"><CheckCircle size={28} /></div>
-                <h3 className="font-bold text-xl mb-3">Solo un requisito</h3>
-                <p className="text-sm text-white/60 leading-relaxed mb-4">No pedimos mucho. Solo necesitas tener ganas de aprender.</p>
-                <div className="inline-block bg-[#D1B28A] text-[#211814] font-bold px-3 py-1 rounded text-xs">Tener 14 años o más</div>
+              <div className="shrink-0">
+                <div className="bg-[#5A431C] text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-[#5A431C]/20 flex items-center gap-2 tracking-wide text-sm">
+                  <span>Tener 14 años o más</span>
+                </div>
               </div>
             </div>
+
           </div>
         </section>
 
