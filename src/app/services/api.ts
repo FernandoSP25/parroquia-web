@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // La URL de tu FastAPI (asegúrate que esté corriendo)
-const API_URL = 'http://10.13.80.141:8000/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 
 const api = axios.create({

@@ -178,3 +178,13 @@ export interface Evento {
   requiere_confirmacion: boolean;
   activo: boolean;
 }
+
+export interface GenerarQrRequest {
+  evento_id: string;
+  rol_generador: 'ADMIN' | 'CATEQUISTA';
+}
+
+export interface QrResponse {
+  token_completo: string;
+  expires_at: string;
+}
