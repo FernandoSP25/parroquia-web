@@ -389,9 +389,24 @@ export default function EventosPage() {
                   
                   {isLoaded ? (
                     <div className="w-full h-48 rounded-xl overflow-hidden border border-[#C0B1A0]/40 shadow-sm relative">
-                      <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={coordenadas.lat ? coordenadas : centerDefault} zoom={15} onClick={handleMapClick} options={{ disableDefaultUI: true, zoomControl: true, streetViewControl: false }}>
-                        {coordenadas.lat && coordenadas.lng && (<Marker position={{ lat: coordenadas.lat, lng: coordenadas.lng }} animation={google.maps.Animation.DROP} />)}
-                      </GoogleMap>
+                      <GoogleMap 
+                            mapContainerStyle={{ width: '100%', height: '100%' }} 
+                            center={(coordenadas.lat !== null && coordenadas.lng !== null) 
+                              ? { lat: coordenadas.lat, lng: coordenadas.lng } 
+                              : centerDefault
+                            } 
+                            zoom={15} 
+                            onClick={handleMapClick} 
+                            options={{ disableDefaultUI: true, zoomControl: true, streetViewControl: false }}
+                          >
+                            {/* Solo dibujamos el marcador si tenemos coordenadas numéricas válidas */}
+                            {coordenadas.lat !== null && coordenadas.lng !== null && (
+                              <Marker 
+                                position={{ lat: coordenadas.lat, lng: coordenadas.lng }} 
+                                animation={google.maps.Animation.DROP} 
+                              />
+                            )}
+                          </GoogleMap>
                     </div>
                   ) : (
                     <div className="w-full h-48 bg-white rounded-xl flex flex-col items-center justify-center border border-gray-200"><Loader2 className="animate-spin text-[#C0B1A0] mb-2" size={24} /><span className="text-xs text-gray-500">Cargando mapa...</span></div>
