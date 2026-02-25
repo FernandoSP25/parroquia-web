@@ -334,7 +334,7 @@ export default function EventosPage() {
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha <span className="text-red-500">*</span></label>
                   <DatePicker
                     selected={fechaSeleccionada}
-                    onChange={(date) => setFechaSeleccionada(date)}
+                    onChange={(date: Date | null) => setFechaSeleccionada(date)}
                     dateFormat="dd/MM/yyyy"
                     locale="es"
                     minDate={new Date()}
