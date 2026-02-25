@@ -188,3 +188,13 @@ export interface QrResponse {
   token_completo: string;
   expires_at: string;
 }
+
+export interface AnioCatequetico {
+  id: string;
+  anio: number;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  descripcion?: string;
+  activo: boolean;
+  created_at: string;
+}
