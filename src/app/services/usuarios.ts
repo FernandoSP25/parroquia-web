@@ -4,7 +4,9 @@ import { Usuario, CreateConfirmanteDTO, CreateCatequistaDTO, CreateAdminDTO,Upda
 export const usuarioService = {
   // Listar usuarios
   getAll: async (): Promise<Usuario[]> => {
-    const { data } = await api.get<Usuario[]>("/usuarios");
+    const { data } = await api.get<Usuario[]>("/usuarios", {
+      params: { _t: new Date().getTime() } 
+    });
     return data;
   },
 

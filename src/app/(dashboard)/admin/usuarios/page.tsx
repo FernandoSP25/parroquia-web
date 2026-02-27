@@ -49,7 +49,7 @@ export default function UsuariosPage() {
   const [catequistaForm, setCatequistaForm] = useState<CreateCatequistaDTO>({
       nombres: "", apellidos: "", dni: "", 
       fecha_nacimiento: "", email_personal: "", celular: "",
-      password: "" // <--- Nuevo campo importante
+      password: "" 
   });
 
   const [adminForm, setAdminForm] = useState<CreateAdminDTO>({
@@ -100,51 +100,51 @@ export default function UsuariosPage() {
   };
 
   // ENVIAR FORMULARIO
+  // ENVIAR FORMULARIO
 const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (isEditing && selectedUser) {
-        // --- LÓGICA DE EDICIÓN ---
-        // Filtramos campos vacíos para no enviar basura
-        const payload: UpdateUsuarioDTO = {
-            nombres: editForm.nombres,
-            apellidos: editForm.apellidos,
-            dni: editForm.dni,
-            email_personal: editForm.email_personal,
-            celular: editForm.celular,
-        };
-        // Solo enviamos password si el usuario escribió algo
-        if (editForm.password && editForm.password.length > 0) {
-            payload.password = editForm.password;
-        }
-
-        await usuarioService.update(selectedUser.id, payload);
-        Swal.fire('Actualizado', 'Usuario actualizado correctamente', 'success');
-
-      } else {
-        // --- LÓGICA DE CREACIÓN ---
-        if (selectedRole === 'CONFIRMANTE') {
-          await usuarioService.createConfirmante(confirmanteForm);
-          Swal.fire('Éxito', `Confirmante creado. Contraseña: DNI`, 'success');
-        } 
-        else if (selectedRole === 'CATEQUISTA') {
-            await usuarioService.createCatequista(catequistaForm); 
-            Swal.fire('Éxito', 'Catequista registrado.', 'success');
-        }
-        else if (selectedRole === 'ADMIN') {
-            await usuarioService.createAdmin(adminForm); 
-            Swal.fire('Éxito', 'Administrador registrado.', 'success');
-        }
+  e.preventDefault();
+  try {
+    if (isEditing && selectedUser) {
+      const payload: UpdateUsuarioDTO = {
+          nombres: editForm.nombres,
+          apellidos: editForm.apellidos,
+          dni: editForm.dni,
+          email_personal: editForm.email_personal,
+          celular: editForm.celular,
+      };
+      if (editForm.password && editForm.password.length > 0) {
+          payload.password = editForm.password;
       }
-      
-      setIsModalOpen(false);
-      fetchUsuarios();
-    } catch (error: any) {
-      console.error(error);
-      const msg = error.response?.data?.detail || 'Error al procesar la solicitud';
-      Swal.fire('Error', String(msg), 'error');
+      await usuarioService.update(selectedUser.id, payload);
+      // 👈 Añadimos await a Swal
+      await Swal.fire('Actualizado', 'Usuario actualizado correctamente', 'success'); 
+
+    } else {
+      if (selectedRole === 'CONFIRMANTE') {
+        await usuarioService.createConfirmante(confirmanteForm);
+        // 👈 Añadimos await
+        await Swal.fire('Éxito', `Confirmante creado. Contraseña: DNI`, 'success'); 
+      } 
+      else if (selectedRole === 'CATEQUISTA') {
+          await usuarioService.createCatequista(catequistaForm); 
+          await Swal.fire('Éxito', 'Catequista registrado.', 'success');
+      }
+      else if (selectedRole === 'ADMIN') {
+          await usuarioService.createAdmin(adminForm); 
+          await Swal.fire('Éxito', 'Administrador registrado.', 'success');
+      }
     }
-  };
+    
+    setIsModalOpen(false);
+    await fetchUsuarios(); // 👈 FALTABA ESTE AWAIT MUY IMPORTANTE
+
+  } catch (error: any) {
+    console.error(error);
+    const msg = error.response?.data?.detail || 'Error al procesar la solicitud';
+    Swal.fire('Error', String(msg), 'error');
+  }
+};
+
 
   const handleDelete = async (id: string, activo: boolean) => {
     const accionInfinitivo = activo ? "desactivar" : "activar";
