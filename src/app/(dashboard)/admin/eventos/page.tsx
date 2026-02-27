@@ -22,11 +22,15 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
 import { qrService } from '@/app/services/qr';
+import { useAuth } from '@/app/context/AuthContext';
 
-const ROL_ACTUAL = 'ADMIN'; // Cambia a 'CATEQUISTA'
 registerLocale('es', es);
 
 export default function EventosPage() {
+
+  const { user } = useAuth();
+  const ROL_ACTUAL = user?.rol || 'ADMIN'; 
+
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroVista, setFiltroVista] = useState<'PROXIMOS' | 'PASADOS'>('PROXIMOS');
