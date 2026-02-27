@@ -17,13 +17,13 @@ import {
   AlertCircle
 } from 'lucide-react';
 import QRCode from "react-qr-code";
-import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api';
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
 import { qrService } from '@/app/services/qr';
 import { useAuth } from '@/app/context/AuthContext';
-
+import Swal from 'sweetalert2';
+import { useJsApiLoader, GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
 registerLocale('es', es);
 
 export default function EventosPage() {
@@ -40,6 +40,7 @@ export default function EventosPage() {
 
   const centerDefault = { lat: -8.0561209 , lng: -79.0517475 };
 
+  const [ubicacion, setUbicacion] = useState("");
   // MODAL CREAR
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,11 +53,16 @@ export default function EventosPage() {
   // MODAL QR
   const [eventoSeleccionadoQR, setEventoSeleccionadoQR] = useState<Evento | null>(null);
   const [qrToken, setQrToken] = useState<string | null>(null);
-  const today = new Date().toISOString().split('T')[0];
+
+  const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+  const today = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
   
+  const [libraries] = useState(['places']);
+
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: libraries as any,
   });
 
   // ========== LÓGICA DE VALIDACIÓN EN TIEMPO REAL ==========
@@ -78,7 +84,18 @@ export default function EventosPage() {
 
   const handleMapClick = (event: google.maps.MapMouseEvent) => {
     if (event.latLng) {
-      setCoordenadas({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+      const lat = event.latLng.lat();
+      const lng = event.latLng.lng();
+      setCoordenadas({ lat, lng });
+
+      // Geocodificación Inversa: Convertir GPS a Dirección de texto
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results && results[0]) {
+          // Guarda la dirección encontrada en el input de texto
+          setUbicacion(results[0].formatted_address);
+        }
+      });
     }
   };
 
@@ -92,36 +109,41 @@ export default function EventosPage() {
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng()
         });
+        // Guarda el nombre del lugar buscado
+        setUbicacion(place.name || place.formatted_address || "");
       }
     }
   };
 
   const fetchEventos = async () => {
-    try {
-      setLoading(true);
-      const data = await eventoService.getAll(undefined, true);
-      const filtrados = filtroVista === 'PROXIMOS'
-          ? data.filter(e => e.fecha >= today)
-          : data.filter(e => e.fecha < today);
-      setEventos(filtrados);
-    } catch (error) {
-      console.error("Error cargando eventos:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(true);
+        const data = await eventoService.getAll(undefined, true);
+        const filtrados = filtroVista === 'PROXIMOS'
+            ? data.filter(e => e.fecha >= today)
+            : data.filter(e => e.fecha < today);
+        setEventos(filtrados);
+      } catch (error) {
+        console.error("Error cargando eventos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  useEffect(() => {
-    fetchEventos();
-  }, [filtroVista]);
+    useEffect(() => {
+      fetchEventos();
+    }, [filtroVista]);
 
-  // Función para cerrar y limpiar el modal
-  const cerrarModal = () => {
+    // Función para cerrar y limpiar el modal
+    const cerrarModal = () => {
     setIsModalOpen(false);
     setFechaSeleccionada(null);
     setHoraInicio("");
     setHoraFin("");
+    setCoordenadas({ lat: null, lng: null });
+    setUbicacion("");
   };
+
 
   const handleCrearEvento = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -199,6 +221,61 @@ export default function EventosPage() {
     }
   };
 
+  const handleEliminarEvento = async (id: string) => {
+  const result = await Swal.fire({
+    title: '¿Cancelar evento?',
+    text: "Esta acción no se puede deshacer",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#C0B1A0',
+    confirmButtonText: 'Sí, cancelar evento',
+    cancelButtonText: 'No'
+  });
+
+    if (result.isConfirmed) {
+      try {
+        await eventoService.delete(id);
+        fetchEventos();
+        Swal.fire('Cancelado', 'El evento ha sido eliminado.', 'success');
+      } catch (error) {
+        Swal.fire('Error', 'No se pudo eliminar el evento', 'error');
+      }
+    }
+  };
+
+  // Genera opciones de 5 en 5 minutos. Si es hoy, oculta las horas pasadas.
+  const opcionesHoraInicio = useMemo(() => {
+    const opciones = [];
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 5) {
+        const horaStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        // Si no hay límite (es futuro) o la hora es mayor/igual a la actual
+        if (!minHoraInicio || horaStr >= minHoraInicio) {
+          opciones.push(horaStr);
+        }
+      }
+    }
+    return opciones;
+  }, [minHoraInicio]);
+
+  // Genera opciones para el Fin. Siempre debe ser mayor a la hora de Inicio.
+  const opcionesHoraFin = useMemo(() => {
+    const opciones = [];
+    const minParaFin = horaInicio ? horaInicio : minHoraInicio;
+
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 5) {
+        const horaStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        // Estrictamente mayor (>) para que el evento dure al menos 5 min
+        if (!minParaFin || horaStr > minParaFin) { 
+          opciones.push(horaStr);
+        }
+      }
+    }
+    return opciones;
+  }, [horaInicio, minHoraInicio]);
+
   return (
     <div className="min-h-screen bg-[#F9F8F6] pb-20 relative font-sans text-[#211814]">
       {/* ... HEADER Y CONTENIDO SE MANTIENEN EXACTAMENTE IGUAL ... */}
@@ -246,7 +323,13 @@ export default function EventosPage() {
                     <span className="text-[10px] text-gray-400 uppercase tracking-wide mt-2">{diaSemana}</span>
                   </div>
                   <div className="p-6 flex-1 flex flex-col justify-between relative">
-                    <button className="absolute top-4 right-4 text-gray-400 hover:text-[#5A431C] transition-colors p-1.5 rounded-full hover:bg-[#F9F8F6]"><MoreVertical size={18} /></button>
+                    <button 
+                      onClick={() => handleEliminarEvento(evento.id)} 
+                      className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50"
+                      title="Eliminar evento"
+                    >
+                      <X size={18} /> {/* O usa un ícono de Trash */}
+                    </button>
                     <div className="pr-6">
                       <div className="flex items-center gap-2 mb-1">
                         {evento.obligatorio && (<span className="bg-[#ca8a04]/10 text-[#ca8a04] border border-[#ca8a04]/20 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Obligatorio</span>)}
@@ -348,27 +431,38 @@ export default function EventosPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Hora Inicio</label>
-                  <input 
-                    type="time" 
-                    name="hora_inicio" 
-                    value={horaInicio}
-                    onChange={(e) => setHoraInicio(e.target.value)}
-                    min={minHoraInicio} // Propiedad nativa HTML para bloquear dropdown
-                    className={`w-full bg-[#F9F8F6] border ${errorPasado ? 'border-red-500 text-red-600 focus:ring-red-500' : 'border-[#C0B1A0]/40 focus:border-[#5A431C] focus:ring-[#5A431C]'} rounded-xl px-4 py-3 focus:outline-none focus:ring-1 transition-all font-medium`} 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Hora Fin</label>
-                  <input 
-                    type="time" 
-                    name="hora_fin" 
-                    value={horaFin}
-                    onChange={(e) => setHoraFin(e.target.value)}
-                    min={horaInicio || minHoraInicio} // El dropdown bloquea horas anteriores al inicio
-                    className={`w-full bg-[#F9F8F6] border ${errorTiempo ? 'border-red-500 text-red-600 focus:ring-red-500' : 'border-[#C0B1A0]/40 focus:border-[#5A431C] focus:ring-[#5A431C]'} rounded-xl px-4 py-3 focus:outline-none focus:ring-1 transition-all font-medium`} 
-                  />
-                </div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Hora Inicio</label>
+                <select 
+                  name="hora_inicio" 
+                  value={horaInicio}
+                  onChange={(e) => {
+                    setHoraInicio(e.target.value);
+                    setHoraFin(""); // Limpiamos la hora fin si cambian el inicio
+                  }}
+                  disabled={!fechaSeleccionada} // Bloqueado hasta que elijan fecha
+                  className={`w-full bg-[#F9F8F6] border ${errorPasado ? 'border-red-500 text-red-600 focus:ring-red-500' : 'border-[#C0B1A0]/40 focus:border-[#5A431C] focus:ring-[#5A431C]'} rounded-xl px-4 py-3 focus:outline-none focus:ring-1 transition-all font-medium disabled:opacity-50`} 
+                >
+                  <option value="">Seleccione...</option>
+                  {opcionesHoraInicio.map((hora) => (
+                    <option key={hora} value={hora}>{hora}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Hora Fin</label>
+                <select 
+                  name="hora_fin" 
+                  value={horaFin}
+                  onChange={(e) => setHoraFin(e.target.value)}
+                  disabled={!horaInicio} // UX Premium: Bloqueado hasta que elijan inicio
+                  className={`w-full bg-[#F9F8F6] border ${errorTiempo ? 'border-red-500 text-red-600 focus:ring-red-500' : 'border-[#C0B1A0]/40 focus:border-[#5A431C] focus:ring-[#5A431C]'} rounded-xl px-4 py-3 focus:outline-none focus:ring-1 transition-all font-medium disabled:opacity-50`} 
+                >
+                  <option value="">Seleccione...</option>
+                  {opcionesHoraFin.map((hora) => (
+                    <option key={hora} value={hora}>{hora}</option>
+                  ))}
+                </select>
+              </div>
               </div>
 
               {/* MENSAJE DE ERROR VISUAL (Aparece si intentan forzar la hora manual) */}
@@ -381,9 +475,31 @@ export default function EventosPage() {
 
               <div className="bg-[#F9F8F6] p-5 rounded-2xl border border-[#C0B1A0]/30 space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Lugar / Dirección <span className="text-red-500">*</span></label>
-                  <input required type="text" name="ubicacion" placeholder="Ej. Templo Parroquial o Casa de Retiro" className="w-full bg-white border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] transition-all font-medium text-[#211814] shadow-sm" />
-                </div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Lugar / Dirección <span className="text-red-500">*</span></label>
+                    
+                    {/* Aquí usamos la lógica del Autocomplete */}
+                    {isLoaded ? (
+                      <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged} options={{ componentRestrictions: { country: "pe" } }}>
+                        <input 
+                          required 
+                          type="text" 
+                          name="ubicacion" 
+                          value={ubicacion}
+                          onChange={(e) => setUbicacion(e.target.value)}
+                          placeholder="Ej. Templo Parroquial o Casa de Retiro" 
+                          className="w-full bg-white border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] transition-all font-medium text-[#211814] shadow-sm" 
+                        />
+                      </Autocomplete>
+                    ) : (
+                      <input 
+                        required 
+                        type="text" 
+                        name="ubicacion" 
+                        placeholder="Cargando buscador..." 
+                        className="w-full bg-white border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] transition-all font-medium text-[#211814] shadow-sm" 
+                      />
+                    )}
+                  </div>
                 
                 <div>
                   <label className="flex justify-between items-end mb-2">
