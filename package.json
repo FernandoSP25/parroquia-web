@@ -13,6 +13,7 @@
     "@react-google-maps/api": "^2.20.8",
     "axios": "^1.13.3",
     "date-fns": "^4.1.0",
+    "html5-qrcode": "^2.3.8",
     "invariant": "^2.2.4",
     "lucide-react": "^0.563.0",
     "next": "16.1.4",

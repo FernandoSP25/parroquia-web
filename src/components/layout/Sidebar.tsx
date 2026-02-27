@@ -44,7 +44,7 @@ export default function Sidebar() {
           { name: "Mi Panel", href: "/catequista", icon: <LayoutDashboard size={20} /> },
           { name: "Mi Perfil", href: "/catequista/perfil", icon: <UserCircle size={20} /> },
           { name: "Mis Grupos", href: "/catequista/grupos", icon: <Users size={20} /> },
-          { name: "Asistencias", href: "/catequista/asistencia", icon: <QrCode size={20} /> },
+          { name: "Asistencia", href: "/catequista/asistencia", icon: <QrCode size={20} /> },
           { name: "Notas", href: "/catequista/notas", icon: <FileText size={20} /> },
         ];
       case "CONFIRMANTE":
