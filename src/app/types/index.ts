@@ -35,17 +35,6 @@ export interface Usuario {
   celular?: string;
 }
 
-// ... mantén tus otros tipos (CreateUsuarioDTO, etc.) igual ...
-
-// Lo que enviamos para CREAR (según tu schema UsuarioCreate)
-export interface CreateUsuarioDTO {
-  nombre: string;
-  email: string;
-  dni: string;
-  password: string; // Obligatorio al crear
-  activo: boolean;
-}
-
 export interface UpdateUsuarioDTO {
   nombres?: string;
   apellidos?: string;

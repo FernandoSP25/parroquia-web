@@ -29,7 +29,7 @@ registerLocale('es', es);
 export default function EventosPage() {
 
   const { user } = useAuth();
-  const ROL_ACTUAL = user?.rol || 'ADMIN'; 
+  const ROL_ACTUAL = user?.roles?.[0] || 'ADMIN';
 
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
