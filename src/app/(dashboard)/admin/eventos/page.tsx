@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { eventoService } from '@/app/services/eventos';
-import { Evento } from '@/app/types';
+import { eventoService } from '@/app/services/eventos'; // Asegúrate de tener este servicio
+import { asistenciaService } from '@/app/services/asistencia';
+import { Evento, TipoEvento } from '@/app/types';
+import { tipoEventoService } from '@/app/services/tipoEvento'; // Asegúrate de que la ruta sea correcta
 import {
   Calendar,
   Clock,
@@ -10,24 +12,104 @@ import {
   Plus,
   Loader2,
   X,
-  QrCode,
   Users,
-  MoreVertical,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ClipboardList,
+  Save
 } from 'lucide-react';
-import QRCode from "react-qr-code";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
-import { qrService } from '@/app/services/qr';
 import { useAuth } from '@/app/context/AuthContext';
 import Swal from 'sweetalert2';
 import { useJsApiLoader, GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
+import { useRef  } from 'react';
+import { ChevronDown } from 'lucide-react';
+
 registerLocale('es', es);
 
-export default function EventosPage() {
+// --- INTERFAZ PARA EL CHECKLIST ---
+interface AlumnoChecklist {
+  confirmante_id: string;
+  usuario_id: string;
+  nombres: string;
+  apellidos: string;
+  grupo_nombre: string;
+  estado_id: number;
+  observaciones: string | null;
+}
 
+const EstadoDropdown = ({ 
+  estadoId, 
+  onChange 
+}: { 
+  estadoId: number; 
+  onChange: (id: number) => void; 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Cierra el menú si haces clic afuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // AQUÍ ESTÁ LA ACTUALIZACIÓN: Los 4 estados exactos (A, T, F, FJ)
+  const estados = [
+    { id: 1, label: 'Asistió (A)', icon: '✅', textColor: 'text-green-700', bgColor: 'bg-green-50', borderColor: 'border-green-200', hoverColor: 'hover:bg-green-100' },
+    { id: 2, label: 'Tarde (T)', icon: '⚠️', textColor: 'text-yellow-700', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200', hoverColor: 'hover:bg-yellow-100' },
+    { id: 3, label: 'Faltó (F)', icon: '❌', textColor: 'text-red-700', bgColor: 'bg-red-50', borderColor: 'border-red-200', hoverColor: 'hover:bg-red-100' },
+    { id: 4, label: 'Falta Just. (FJ)', icon: '📝', textColor: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200', hoverColor: 'hover:bg-blue-100' },
+  ];
+
+  // Si por algún motivo el ID no existe, cae por defecto en "Faltó"
+  const actual = estados.find(e => e.id === estadoId) || estados[2];
+
+  return (
+    <div className={`relative inline-block text-left w-36 ${isOpen ? 'z-50' : 'z-10'}`} ref={dropdownRef}>
+
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center justify-between w-full px-3 py-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-xl border transition-all duration-200 shadow-sm
+          ${actual.bgColor} ${actual.textColor} ${actual.borderColor} hover:opacity-80`}
+      >
+        <span className="flex items-center gap-1.5 whitespace-nowrap">{actual.icon} {actual.label}</span>
+        <ChevronDown size={14} className={`transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Menú Desplegable */}
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-xl shadow-xl border border-[#C0B1A0]/30 z-[999] overflow-hidden py-1 animate-fade-in-up">
+          {estados.map((est) => (
+            <button
+              key={est.id}
+              type="button"
+              onClick={() => {
+                onChange(est.id);
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase transition-colors
+                ${estadoId === est.id ? 'bg-gray-50' : 'bg-white'} 
+                ${est.hoverColor} ${est.textColor}`}
+            >
+              {est.icon} {est.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function EventosPage() {
   const { user } = useAuth();
   const ROL_ACTUAL = user?.roles?.[0] || 'ADMIN';
 
@@ -35,30 +117,40 @@ export default function EventosPage() {
   const [loading, setLoading] = useState(true);
   const [filtroVista, setFiltroVista] = useState<'PROXIMOS' | 'PASADOS'>('PROXIMOS');
 
+  // MAPAS
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
   const [coordenadas, setCoordenadas] = useState<{lat: number | null, lng: number | null}>({ lat: null, lng: null });
-
   const centerDefault = { lat: -8.0561209 , lng: -79.0517475 };
-
   const [ubicacion, setUbicacion] = useState("");
-  // MODAL CREAR
+
+  // MODAL CREAR EVENTO
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // NUEVOS ESTADOS: Control en tiempo real de las horas
   const [fechaSeleccionada, setFechaSeleccionada] = useState<Date | null>(null);
   const [horaInicio, setHoraInicio] = useState("");
   const [horaFin, setHoraFin] = useState("");
 
-  // MODAL QR
-  const [eventoSeleccionadoQR, setEventoSeleccionadoQR] = useState<Evento | null>(null);
-  const [qrToken, setQrToken] = useState<string | null>(null);
+  const [tiposEvento, setTiposEvento] = useState<TipoEvento[]>([]);
+
+  useEffect(() => {
+    const loadTipos = async () => {
+      const data = await tipoEventoService.getAll();
+      setTiposEvento(data);
+    };
+    loadTipos();
+  }, []);
+
+  // --- NUEVOS ESTADOS PARA EL CHECKLIST MANUAL ---
+  const [isChecklistOpen, setIsChecklistOpen] = useState(false);
+  const [eventoSeleccionado, setEventoSeleccionado] = useState<Evento | null>(null);
+  const [alumnosChecklist, setAlumnosChecklist] = useState<AlumnoChecklist[]>([]);
+  const [loadingChecklist, setLoadingChecklist] = useState(false);
+  const [guardandoAsistencia, setGuardandoAsistencia] = useState(false);
 
   const tzoffset = (new Date()).getTimezoneOffset() * 60000;
   const today = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
   
   const [libraries] = useState(['places']);
-
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
@@ -72,27 +164,23 @@ export default function EventosPage() {
     fechaSeleccionada.getMonth() === ahora.getMonth() &&
     fechaSeleccionada.getFullYear() === ahora.getFullYear();
 
-  // Calcula la hora actual en formato HH:mm si la fecha es hoy
   const minHoraInicio = esHoy 
     ? `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}` 
     : undefined;
 
-  // Errores dinámicos que bloquean la UI inmediatamente
   const errorPasado = esHoy && horaInicio && minHoraInicio && horaInicio < minHoraInicio;
   const errorTiempo = horaInicio && horaFin && horaFin <= horaInicio;
-  // =========================================================
 
+  // ========== FUNCIONES MAPAS Y EVENTOS ==========
   const handleMapClick = (event: google.maps.MapMouseEvent) => {
     if (event.latLng) {
       const lat = event.latLng.lat();
       const lng = event.latLng.lng();
       setCoordenadas({ lat, lng });
 
-      // Geocodificación Inversa: Convertir GPS a Dirección de texto
       const geocoder = new window.google.maps.Geocoder();
       geocoder.geocode({ location: { lat, lng } }, (results, status) => {
         if (status === "OK" && results && results[0]) {
-          // Guarda la dirección encontrada en el input de texto
           setUbicacion(results[0].formatted_address);
         }
       });
@@ -100,42 +188,36 @@ export default function EventosPage() {
   };
 
   const onLoad = (autoC: google.maps.places.Autocomplete) => setAutocomplete(autoC);
-  
   const onPlaceChanged = () => {
     if (autocomplete !== null) {
       const place = autocomplete.getPlace();
       if (place.geometry && place.geometry.location) {
-        setCoordenadas({
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng()
-        });
-        // Guarda el nombre del lugar buscado
+        setCoordenadas({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
         setUbicacion(place.name || place.formatted_address || "");
       }
     }
   };
 
   const fetchEventos = async () => {
-      try {
-        setLoading(true);
-        const data = await eventoService.getAll(undefined, true);
-        const filtrados = filtroVista === 'PROXIMOS'
-            ? data.filter(e => e.fecha >= today)
-            : data.filter(e => e.fecha < today);
-        setEventos(filtrados);
-      } catch (error) {
-        console.error("Error cargando eventos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      setLoading(true);
+      const data = await eventoService.getAll(undefined, true);
+      const filtrados = filtroVista === 'PROXIMOS'
+        ? data.filter(e => e.fecha >= today)
+        : data.filter(e => e.fecha < today);
+      setEventos(filtrados);
+    } catch (error) {
+      console.error("Error cargando eventos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    useEffect(() => {
-      fetchEventos();
-    }, [filtroVista]);
+  useEffect(() => {
+    fetchEventos();
+  }, [filtroVista]);
 
-    // Función para cerrar y limpiar el modal
-    const cerrarModal = () => {
+  const cerrarModal = () => {
     setIsModalOpen(false);
     setFechaSeleccionada(null);
     setHoraInicio("");
@@ -144,16 +226,12 @@ export default function EventosPage() {
     setUbicacion("");
   };
 
-
   const handleCrearEvento = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Si los errores visuales están activos, evitamos que un hacker envíe el form
     if (!fechaSeleccionada || errorTiempo || errorPasado) return;
 
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
-
     const year = fechaSeleccionada.getFullYear();
     const month = String(fechaSeleccionada.getMonth() + 1).padStart(2, '0');
     const day = String(fechaSeleccionada.getDate()).padStart(2, '0');
@@ -161,6 +239,7 @@ export default function EventosPage() {
 
     const payload = {
       nombre: formData.get("nombre") as string,
+      tipo_id: Number(formData.get("tipo_id")),
       fecha: fechaBackend,
       hora_inicio: horaInicio || undefined,
       hora_fin: horaFin || undefined,
@@ -176,8 +255,9 @@ export default function EventosPage() {
       await eventoService.create(payload);
       cerrarModal();
       fetchEventos();
+      Swal.fire('Éxito', 'Evento creado correctamente', 'success');
     } catch (error) {
-      alert("Error al crear evento.");
+      Swal.fire('Error', 'Error al crear evento.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -200,38 +280,17 @@ export default function EventosPage() {
     return `${hora12}:${minutos} ${ampm}`;
   };
 
-  const handleAbrirQR = async (evento: Evento) => {
-    setEventoSeleccionadoQR(evento);
-    setQrToken(null); // Limpiamos la UI para mostrar el estado "Generando..."
-    
-    try {
-      // Llamada limpia y tipada a nuestra capa de servicios
-      const response = await qrService.generar({
-        evento_id: evento.id,
-        rol_generador: ROL_ACTUAL as 'ADMIN' | 'CATEQUISTA'
-      });
-      
-      // Seteamos el string real que dibujará el QR (ej: "SJMV-1234-abcd...")
-      setQrToken(response.token_completo);
-      
-    } catch (error) {
-      console.error("Error al generar el QR:", error);
-      alert("Hubo un problema de conexión al generar el acceso QR.");
-      setEventoSeleccionadoQR(null); // Cerramos el modal si falla
-    }
-  };
-
   const handleEliminarEvento = async (id: string) => {
-  const result = await Swal.fire({
-    title: '¿Cancelar evento?',
-    text: "Esta acción no se puede deshacer",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#C0B1A0',
-    confirmButtonText: 'Sí, cancelar evento',
-    cancelButtonText: 'No'
-  });
+    const result = await Swal.fire({
+      title: '¿Cancelar evento?',
+      text: "Esta acción no se puede deshacer",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#C0B1A0',
+      confirmButtonText: 'Sí, cancelar evento',
+      cancelButtonText: 'No'
+    });
 
     if (result.isConfirmed) {
       try {
@@ -244,46 +303,104 @@ export default function EventosPage() {
     }
   };
 
-  // Genera opciones de 5 en 5 minutos. Si es hoy, oculta las horas pasadas.
+  // =====================================================================
+  // NUEVAS FUNCIONES PARA EL CHECKLIST MANUAL
+  // =====================================================================
+  
+  const handleAbrirChecklist = async (evento: Evento) => {
+    setEventoSeleccionado(evento);
+    setIsChecklistOpen(true);
+    setLoadingChecklist(true);
+    
+    try {
+      // Llamamos al backend para traer a los alumnos de este evento
+      const data = await asistenciaService.getChecklist(evento.id);
+      setAlumnosChecklist(data);
+    } catch (error) {
+      console.error("Error cargando checklist:", error);
+      Swal.fire('Error', 'No se pudo cargar la lista de asistencia', 'error');
+      setIsChecklistOpen(false);
+    } finally {
+      setLoadingChecklist(false);
+    }
+  };
+
+  const handleChangeEstado = (usuarioId: string, nuevoEstadoId: number) => {
+    setAlumnosChecklist(prev => 
+      prev.map(alumno => 
+        alumno.usuario_id === usuarioId 
+          ? { ...alumno, estado_id: nuevoEstadoId } 
+          : alumno
+      )
+    );
+  };
+
+  const handleGuardarAsistencia = async () => {
+    if (!eventoSeleccionado) return;
+    setGuardandoAsistencia(true);
+
+    try {
+      const payload = {
+        asistencias: alumnosChecklist.map(a => ({
+          usuario_id: a.usuario_id,
+          estado_id: a.estado_id,
+          observaciones: a.observaciones
+        }))
+      };
+
+      await asistenciaService.guardarMasiva(eventoSeleccionado.id, payload);
+      
+      Swal.fire({
+        icon: 'success',
+        title: '¡Asistencia Guardada!',
+        showConfirmButton: false,
+        timer: 1500
+      });
+      setIsChecklistOpen(false);
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Error', 'Hubo un problema al guardar la asistencia', 'error');
+    } finally {
+      setGuardandoAsistencia(false);
+    }
+  };
+
+  // =====================================================================
+
   const opcionesHoraInicio = useMemo(() => {
     const opciones = [];
     for (let h = 0; h < 24; h++) {
       for (let m = 0; m < 60; m += 5) {
         const horaStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-        // Si no hay límite (es futuro) o la hora es mayor/igual a la actual
-        if (!minHoraInicio || horaStr >= minHoraInicio) {
-          opciones.push(horaStr);
-        }
+        if (!minHoraInicio || horaStr >= minHoraInicio) opciones.push(horaStr);
       }
     }
     return opciones;
   }, [minHoraInicio]);
 
-  // Genera opciones para el Fin. Siempre debe ser mayor a la hora de Inicio.
   const opcionesHoraFin = useMemo(() => {
     const opciones = [];
     const minParaFin = horaInicio ? horaInicio : minHoraInicio;
-
     for (let h = 0; h < 24; h++) {
       for (let m = 0; m < 60; m += 5) {
         const horaStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-        // Estrictamente mayor (>) para que el evento dure al menos 5 min
-        if (!minParaFin || horaStr > minParaFin) { 
-          opciones.push(horaStr);
-        }
+        if (!minParaFin || horaStr > minParaFin) opciones.push(horaStr);
       }
     }
     return opciones;
   }, [horaInicio, minHoraInicio]);
 
+
+  
+
   return (
     <div className="min-h-screen bg-[#F9F8F6] pb-20 relative font-sans text-[#211814]">
-      {/* ... HEADER Y CONTENIDO SE MANTIENEN EXACTAMENTE IGUAL ... */}
+      {/* HEADER */}
       <div className="bg-white border-b border-[#C0B1A0]/30 px-6 py-6 sticky top-0 z-30 shadow-sm">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#211814]">Control de Asistencia</h1>
-            <p className="text-sm text-gray-500 mt-1">Gestiona eventos y genera accesos QR</p>
+            <p className="text-sm text-gray-500 mt-1">Gestiona eventos y la asistencia de tus grupos</p>
           </div>
           <div className="flex w-full md:w-auto items-center gap-4">
             <div className="bg-[#F9F8F6] p-1.5 rounded-xl flex border border-[#C0B1A0]/30 flex-1 md:flex-none">
@@ -299,6 +416,7 @@ export default function EventosPage() {
         </div>
       </div>
 
+      {/* LISTA DE EVENTOS */}
       <div className="max-w-5xl mx-auto px-6 py-10">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-[#5A431C]">
@@ -316,7 +434,11 @@ export default function EventosPage() {
             {eventos.map((evento) => {
               const { dia, mes, diaSemana } = formatFecha(evento.fecha);
               return (
-                <div key={evento.id} className="bg-white rounded-[2rem] border border-[#C0B1A0]/30 shadow-sm hover:shadow-lg transition-all duration-300 flex overflow-hidden group">
+                <div key={evento.id} className="bg-white rounded-[2rem] border border-[#C0B1A0]/30 shadow-sm hover:shadow-lg transition-all duration-300 flex overflow-hidden group relative">
+                  
+                  {/* Borde indicador si es obligatorio */}
+                  {evento.obligatorio && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#ca8a04] z-10"></div>}
+
                   <div className="bg-[#F9F8F6] w-28 flex flex-col items-center justify-center p-4 border-r border-[#C0B1A0]/20 shrink-0">
                     <span className="text-xs font-bold text-[#5A431C] uppercase tracking-widest mb-1">{mes}</span>
                     <span className="text-4xl font-serif font-bold text-[#211814]">{dia}</span>
@@ -328,12 +450,9 @@ export default function EventosPage() {
                       className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50"
                       title="Eliminar evento"
                     >
-                      <X size={18} /> {/* O usa un ícono de Trash */}
+                      <X size={18} />
                     </button>
                     <div className="pr-6">
-                      <div className="flex items-center gap-2 mb-1">
-                        {evento.obligatorio && (<span className="bg-[#ca8a04]/10 text-[#ca8a04] border border-[#ca8a04]/20 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Obligatorio</span>)}
-                      </div>
                       <h3 className="font-serif font-bold text-xl leading-tight group-hover:text-[#5A431C] transition-colors line-clamp-2">{evento.nombre}</h3>
                       <div className="text-sm text-gray-500 mt-3 space-y-1.5 font-medium">
                         {evento.hora_inicio && (<div className="flex items-center gap-2"><Clock size={16} className="text-[#C0B1A0]" />{formatHora(evento.hora_inicio)} {evento.hora_fin ? `- ${formatHora(evento.hora_fin)}` : ''}</div>)}
@@ -341,14 +460,16 @@ export default function EventosPage() {
                       </div>
                     </div>
                     <div className="mt-5 pt-4 border-t border-gray-100 flex justify-between items-center">
-                       <div className="flex -space-x-2 opacity-70 group-hover:opacity-100 transition-opacity">
-                         <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-200"></div>
-                         <div className="w-8 h-8 rounded-full border-2 border-white bg-[#C0B1A0]"></div>
-                         <div className="w-8 h-8 rounded-full border-2 border-white bg-[#F9F8F6] flex items-center justify-center text-[10px] font-bold text-[#5A431C]">+</div>
+                       <div className="flex -space-x-2 opacity-70">
+                         {/* Iconos de usuarios simulados */}
+                         <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-gray-500"><Users size={14}/></div>
                        </div>
-                      <button onClick={() => handleAbrirQR(evento)} className="bg-[#F9F8F6] border border-[#C0B1A0]/30 hover:bg-[#5A431C] hover:text-white hover:border-[#5A431C] text-[#5A431C] px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all">
-                        <QrCode size={16} /> Ver QR
+                       
+                       {/* BOTÓN ACTUALIZADO PARA ABRIR CHECKLIST */}
+                      <button onClick={() => handleAbrirChecklist(evento)} className="bg-[#5A431C] hover:bg-[#4a3616] text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all shadow-md">
+                        <ClipboardList size={16} /> Tomar Asistencia
                       </button>
+
                     </div>
                   </div>
                 </div>
@@ -358,46 +479,82 @@ export default function EventosPage() {
         )}
       </div>
 
-      {/* ================= MODAL QR ================= */}
-      {eventoSeleccionadoQR && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEventoSeleccionadoQR(null)}></div>
-          <div className="relative bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl overflow-hidden animate-bounce-in flex flex-col border border-white/20">
-            <div className="bg-[#5A431C] p-8 text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-              <button onClick={() => setEventoSeleccionadoQR(null)} className="absolute top-5 right-5 text-white/50 hover:text-white transition-colors"><X size={24} /></button>
-              <div className="bg-white/10 border border-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-white backdrop-blur-md"><QrCode size={32} /></div>
-              <h2 className="font-serif font-bold text-white text-2xl leading-tight mb-2">{eventoSeleccionadoQR.nombre}</h2>
-              <p className="text-[#C0B1A0] text-sm font-medium flex items-center justify-center gap-1.5"><Calendar size={14} /> {formatFecha(eventoSeleccionadoQR.fecha).dia} de {formatFecha(eventoSeleccionadoQR.fecha).mes}</p>
-            </div>
-            <div className="p-8 flex flex-col items-center bg-[#F9F8F6] relative">
-              <div className="absolute -top-4 bg-white px-5 py-2 rounded-full border border-[#C0B1A0]/30 text-xs font-bold text-[#5A431C] uppercase tracking-widest flex items-center gap-2 shadow-sm">
-                <Users size={16} />{ROL_ACTUAL === 'ADMIN' ? 'Catequistas' : 'Confirmantes'}
+      {/* ================= MODAL CHECKLIST MANUAL ================= */}
+      {isChecklistOpen && eventoSeleccionado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+            
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#F9F8F6]">
+              <div>
+                <h3 className="font-serif font-bold text-2xl text-[#211814]">{eventoSeleccionado.nombre}</h3>
+                <p className="text-sm text-gray-500 font-medium mt-1">Lista de Confirmantes • {formatFecha(eventoSeleccionado.fecha).dia} de {formatFecha(eventoSeleccionado.fecha).mes}</p>
               </div>
-              <div className="bg-white p-5 rounded-3xl shadow-sm border border-[#C0B1A0]/30 w-56 h-56 flex items-center justify-center mt-4">
-                 {!qrToken ? (
-                  <div className="flex flex-col items-center justify-center text-[#C0B1A0]"><Loader2 size={32} className="animate-spin mb-3" /><span className="text-xs font-bold uppercase tracking-widest">Generando...</span></div>
-                ) : (
-                  <div className="w-full h-full animate-fade-in"><QRCode value={`${eventoSeleccionadoQR.id}-${qrToken}`} size={256} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 256 256`} fgColor="#211814" /></div>
-                )}
-              </div>
-              <p className="text-center text-gray-500 text-xs mt-6 leading-relaxed max-w-[250px] font-medium">
-                {ROL_ACTUAL === 'ADMIN' ? "Pide a tus catequistas que escaneen este código para registrar su asistencia." : "Muestra este código a tus confirmantes para registrar su llegada."}
-              </p>
+              <button onClick={() => setIsChecklistOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
             </div>
-            <div className="p-5 bg-white border-t border-[#C0B1A0]/20">
-               <button className="w-full py-3.5 rounded-2xl bg-[#F9F8F6] text-[#5A431C] font-bold text-sm hover:bg-[#EBE5E0] transition-colors border border-[#C0B1A0]/30 flex items-center justify-center gap-2">
-                 <CheckCircle size={18} /> Ver Lista de Asistencia
-               </button>
+
+            <div className="flex-1 overflow-y-auto p-0 pb-32 min-h-[250px]">
+              {loadingChecklist ? (
+                 <div className="flex flex-col items-center justify-center py-20 text-[#5A431C]">
+                   <Loader2 className="animate-spin mb-4" size={40} />
+                   <p className="font-bold">Cargando jovenes...</p>
+                 </div>
+              ) : alumnosChecklist.length === 0 ? (
+                <div className="p-10 text-center text-gray-500">No hay jovenes asignados para este evento.</div>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-white sticky top-0 shadow-sm z-10 text-xs uppercase font-bold text-gray-400">
+                    <tr>
+                      <th className="px-6 py-4">Alumno</th>
+                      <th className="px-6 py-4">Grupo</th>
+                      <th className="px-6 py-4 text-right">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {alumnosChecklist.map((alumno) => (
+                      <tr key={alumno.usuario_id} className="hover:bg-[#F9F8F6] transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-[#211814]">{alumno.nombres} {alumno.apellidos}</div>
+                        </td>
+                        <td className="px-6 py-4 text-gray-500 font-medium">
+                           {alumno.grupo_nombre}
+                        </td>
+                        <td className="px-6 py-4 text-right ">
+                          <EstadoDropdown 
+                            estadoId={alumno.estado_id} 
+                            onChange={(nuevoId) => handleChangeEstado(alumno.usuario_id, nuevoId)} 
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
+
+            <div className="p-6 border-t border-gray-100 bg-white flex justify-end gap-3">
+              <button onClick={() => setIsChecklistOpen(false)} className="px-6 py-3 font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors">
+                Cancelar
+              </button>
+              <button 
+                onClick={handleGuardarAsistencia} 
+                disabled={guardandoAsistencia || loadingChecklist || alumnosChecklist.length === 0}
+                className="bg-[#5A431C] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#4a3616] flex items-center gap-2 disabled:opacity-50 transition-colors shadow-md"
+              >
+                {guardandoAsistencia ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                Guardar Asistencia
+              </button>
+            </div>
+
           </div>
         </div>
       )}
 
-      {/* ================= MODAL CREAR EVENTO ================= */}
+      {/* ================= MODAL CREAR EVENTO (SIN CAMBIOS, se mantiene igual) ================= */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isSubmitting && cerrarModal()}></div>
+           {/* ... el mismo modal de Crear Evento que ya tenías ... */}
+           {/* Asegúrate de mantener la estructura del modal de crear aquí, es idéntica a tu código original */}
+           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isSubmitting && cerrarModal()}></div>
 
           <div className="relative bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[90vh] md:max-h-[85vh]">
             
@@ -414,6 +571,22 @@ export default function EventosPage() {
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre del Evento <span className="text-red-500">*</span></label>
                 <input required name="nombre" placeholder="Ej. Santa Misa de Apertura" className="w-full bg-[#F9F8F6] border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] focus:ring-1 focus:ring-[#5A431C] transition-all font-medium text-[#211814]" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Evento <span className="text-red-500">*</span></label>
+                <select 
+                  required 
+                  name="tipo_id" 
+                  className="w-full bg-[#F9F8F6] border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] font-medium text-[#211814]"
+                >
+                  <option value="">Seleccione un tipo...</option>
+                  {tiposEvento.map(tipo => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.icono} {tipo.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -465,7 +638,6 @@ export default function EventosPage() {
               </div>
               </div>
 
-              {/* MENSAJE DE ERROR VISUAL (Aparece si intentan forzar la hora manual) */}
               {(errorPasado || errorTiempo) && (
                 <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-bold animate-fade-in">
                   <AlertCircle size={18} />
@@ -476,8 +648,6 @@ export default function EventosPage() {
               <div className="bg-[#F9F8F6] p-5 rounded-2xl border border-[#C0B1A0]/30 space-y-4">
                 <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Lugar / Dirección <span className="text-red-500">*</span></label>
-                    
-                    {/* Aquí usamos la lógica del Autocomplete */}
                     {isLoaded ? (
                       <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged} options={{ componentRestrictions: { country: "pe" } }}>
                         <input 
@@ -519,7 +689,6 @@ export default function EventosPage() {
                             onClick={handleMapClick} 
                             options={{ disableDefaultUI: true, zoomControl: true, streetViewControl: false }}
                           >
-                            {/* Solo dibujamos el marcador si tenemos coordenadas numéricas válidas */}
                             {coordenadas.lat !== null && coordenadas.lng !== null && (
                               <Marker 
                                 position={{ lat: coordenadas.lat, lng: coordenadas.lng }} 
@@ -558,8 +727,6 @@ export default function EventosPage() {
               <button type="button" onClick={cerrarModal} className="w-1/3 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors">
                 Cancelar
               </button>
-              
-              {/* MAGIA AQUÍ: El botón se bloquea solo si hay error de tiempo o fecha vacía */}
               <button form="form-crear-evento" type="submit" disabled={isSubmitting || !!errorTiempo || !!errorPasado || !fechaSeleccionada} className="w-2/3 bg-[#5A431C] text-white py-3 rounded-xl font-bold hover:bg-[#4a3616] transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-[#5A431C]/30 disabled:shadow-none">
                 {isSubmitting ? <><Loader2 size={18} className="animate-spin"/> Guardando</> : "Guardar Evento"}
               </button>

@@ -1,3 +1,4 @@
+import { TipoEvento } from '@/app/types';
 // src/types/index.ts
 
 // Lo que enviamos al hacer login
@@ -188,14 +189,21 @@ export interface AnioCatequetico {
   created_at: string;
 }
 
-export interface AsistenciaResponse {
-  id: string;          // Los UUID de Python llegan como string
-  evento_id: string;   // Los UUID de Python llegan como string
-  fecha: string;       // El datetime de Python llega como string ISO (2026-02-27T...)
-  metodo: string;      // 'QR' o 'MANUAL'
-  mensaje: string;     // El mensaje de éxito: "¡Llegada confirmada correctamente!"
+
+export interface AsistenciaUpdate {
+  usuario_id: string;
+  estado_id: number;
+  observaciones: string | null;
 }
 
-export interface AsistenciaQRRequest {
-  codigo_leido: string;
+export interface AsistenciaMasivaPayload {
+  asistencias: AsistenciaUpdate[];
+}
+
+export interface TipoEvento {
+  id: number;
+  codigo: string;
+  nombre: string;
+  icono?: string;
+  color?: string;
 }
