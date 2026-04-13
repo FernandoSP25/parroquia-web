@@ -109,6 +109,16 @@ const EstadoDropdown = ({
   );
 };
 
+// --- FUNCIÓN PARA BLOQUEAR EVENTOS PASADOS ---
+const isEventoFinalizado = (fechaStr: string, horaFinStr?: string) => {
+  const ahora = new Date();
+  // Si el evento no tiene hora_fin, asumimos que termina a las 23:59 de ese mismo día
+  const horaReal = horaFinStr ? horaFinStr : '23:59:00';
+  const fechaEvento = new Date(`${fechaStr}T${horaReal}`);
+  
+  return ahora > fechaEvento; // Devuelve TRUE si ya pasó la hora
+};
+
 export default function EventosPage() {
   const { user } = useAuth();
   const ROL_ACTUAL = user?.roles?.[0] || 'ADMIN';
@@ -201,10 +211,15 @@ export default function EventosPage() {
   const fetchEventos = async () => {
     try {
       setLoading(true);
-      const data = await eventoService.getAll(undefined, true);
-      const filtrados = filtroVista === 'PROXIMOS'
-        ? data.filter(e => e.fecha >= today)
-        : data.filter(e => e.fecha < today);
+      // Nota: Asegúrate de que el backend te devuelva TODOS los eventos aquí
+      const data = await eventoService.getAll();
+      
+      // Filtramos usando la exactitud de minutos y horas
+      const filtrados = data.filter(e => {
+        const terminado = isEventoFinalizado(e.fecha, e.hora_fin);
+        return filtroVista === 'PROXIMOS' ? !terminado : terminado;
+      });
+      
       setEventos(filtrados);
     } catch (error) {
       console.error("Error cargando eventos:", error);
@@ -433,25 +448,34 @@ export default function EventosPage() {
           <div className="grid lg:grid-cols-2 gap-6">
             {eventos.map((evento) => {
               const { dia, mes, diaSemana } = formatFecha(evento.fecha);
+              
+              // 👇 1. Evaluamos si esta tarjeta específica ya caducó
+              const eventoTerminado = isEventoFinalizado(evento.fecha, evento.hora_fin);
+
               return (
-                <div key={evento.id} className="bg-white rounded-[2rem] border border-[#C0B1A0]/30 shadow-sm hover:shadow-lg transition-all duration-300 flex overflow-hidden group relative">
+                <div key={evento.id} className={`bg-white rounded-[2rem] border shadow-sm hover:shadow-lg transition-all duration-300 flex overflow-hidden group relative ${eventoTerminado ? 'border-gray-200 opacity-80' : 'border-[#C0B1A0]/30'}`}>
                   
-                  {/* Borde indicador si es obligatorio */}
                   {evento.obligatorio && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#ca8a04] z-10"></div>}
 
-                  <div className="bg-[#F9F8F6] w-28 flex flex-col items-center justify-center p-4 border-r border-[#C0B1A0]/20 shrink-0">
+                  <div className="bg-[#F9F8F6] w-28 flex flex-col items-center justify-center p-4 border-r border-gray-200 shrink-0">
                     <span className="text-xs font-bold text-[#5A431C] uppercase tracking-widest mb-1">{mes}</span>
                     <span className="text-4xl font-serif font-bold text-[#211814]">{dia}</span>
                     <span className="text-[10px] text-gray-400 uppercase tracking-wide mt-2">{diaSemana}</span>
                   </div>
+                  
                   <div className="p-6 flex-1 flex flex-col justify-between relative">
-                    <button 
-                      onClick={() => handleEliminarEvento(evento.id)} 
-                      className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50"
-                      title="Eliminar evento"
-                    >
-                      <X size={18} />
-                    </button>
+                    
+                    {/* 👇 2. Solo mostramos el botón de Eliminar si NO ha terminado */}
+                    {!eventoTerminado && (
+                      <button 
+                        onClick={() => handleEliminarEvento(evento.id)} 
+                        className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50"
+                        title="Eliminar evento"
+                      >
+                        <X size={18} />
+                      </button>
+                    )}
+
                     <div className="pr-6">
                       <h3 className="font-serif font-bold text-xl leading-tight group-hover:text-[#5A431C] transition-colors line-clamp-2">{evento.nombre}</h3>
                       <div className="text-sm text-gray-500 mt-3 space-y-1.5 font-medium">
@@ -459,18 +483,21 @@ export default function EventosPage() {
                         {evento.ubicacion && (<div className="flex items-center gap-2"><MapPin size={16} className="text-[#C0B1A0]" /><span className="truncate">{evento.ubicacion}</span></div>)}
                       </div>
                     </div>
-                    <div className="mt-5 pt-4 border-t border-gray-100 flex justify-between items-center">
-                       <div className="flex -space-x-2 opacity-70">
-                         {/* Iconos de usuarios simulados */}
-                         <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-gray-500"><Users size={14}/></div>
-                       </div>
-                       
-                       {/* BOTÓN ACTUALIZADO PARA ABRIR CHECKLIST */}
-                      <button onClick={() => handleAbrirChecklist(evento)} className="bg-[#5A431C] hover:bg-[#4a3616] text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all shadow-md">
-                        <ClipboardList size={16} /> Tomar Asistencia
-                      </button>
 
+                    <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap sm:flex-nowrap gap-4 justify-start items-center">
+                    <div className="flex -space-x-2 opacity-70 shrink-0">
+                      <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-gray-500"><Users size={14}/></div>
                     </div>
+                    
+                    <button 
+                      onClick={() => handleAbrirChecklist(evento)} 
+                      className={`w-full sm:w-auto justify-center px-4 sm:px-5 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shrink-0
+                        ${eventoTerminado ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-[#5A431C] hover:bg-[#4a3616] text-white'}`}
+                    >
+                      <ClipboardList size={16} className="shrink-0" /> 
+                      <span className="truncate">{eventoTerminado ? 'Ver Registro' : 'Tomar Asistencia'}</span>
+                    </button>
+                  </div>
                   </div>
                 </div>
               );
@@ -479,75 +506,97 @@ export default function EventosPage() {
         )}
       </div>
 
-      {/* ================= MODAL CHECKLIST MANUAL ================= */}
-      {isChecklistOpen && eventoSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#F9F8F6]">
-              <div>
-                <h3 className="font-serif font-bold text-2xl text-[#211814]">{eventoSeleccionado.nombre}</h3>
-                <p className="text-sm text-gray-500 font-medium mt-1">Lista de Confirmantes • {formatFecha(eventoSeleccionado.fecha).dia} de {formatFecha(eventoSeleccionado.fecha).mes}</p>
+
+      {isChecklistOpen && eventoSeleccionado && (() => {
+        const modalTerminado = isEventoFinalizado(eventoSeleccionado.fecha, eventoSeleccionado.hora_fin);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-[2rem] w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+              
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#F9F8F6]">
+                <div>
+                  <h3 className="font-serif font-bold text-2xl text-[#211814]">{eventoSeleccionado.nombre}</h3>
+                  <p className="text-sm text-gray-500 font-medium mt-1">Lista de Confirmantes • {formatFecha(eventoSeleccionado.fecha).dia} de {formatFecha(eventoSeleccionado.fecha).mes}</p>
+                </div>
+                <button onClick={() => setIsChecklistOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
               </div>
-              <button onClick={() => setIsChecklistOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
-            </div>
 
-            <div className="flex-1 overflow-y-auto p-0 pb-32 min-h-[250px]">
-              {loadingChecklist ? (
-                 <div className="flex flex-col items-center justify-center py-20 text-[#5A431C]">
-                   <Loader2 className="animate-spin mb-4" size={40} />
-                   <p className="font-bold">Cargando jovenes...</p>
-                 </div>
-              ) : alumnosChecklist.length === 0 ? (
-                <div className="p-10 text-center text-gray-500">No hay jovenes asignados para este evento.</div>
-              ) : (
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-white sticky top-0 shadow-sm z-10 text-xs uppercase font-bold text-gray-400">
-                    <tr>
-                      <th className="px-6 py-4">Alumno</th>
-                      <th className="px-6 py-4">Grupo</th>
-                      <th className="px-6 py-4 text-right">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {alumnosChecklist.map((alumno) => (
-                      <tr key={alumno.usuario_id} className="hover:bg-[#F9F8F6] transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-[#211814]">{alumno.nombres} {alumno.apellidos}</div>
-                        </td>
-                        <td className="px-6 py-4 text-gray-500 font-medium">
-                           {alumno.grupo_nombre}
-                        </td>
-                        <td className="px-6 py-4 text-right ">
-                          <EstadoDropdown 
-                            estadoId={alumno.estado_id} 
-                            onChange={(nuevoId) => handleChangeEstado(alumno.usuario_id, nuevoId)} 
-                          />
-                        </td>
+              <div className="flex-1 overflow-y-auto p-0 pb-32 min-h-[250px]">
+                {loadingChecklist ? (
+                   <div className="flex flex-col items-center justify-center py-20 text-[#5A431C]">
+                     <Loader2 className="animate-spin mb-4" size={40} />
+                     <p className="font-bold">Cargando jovenes...</p>
+                   </div>
+                ) : alumnosChecklist.length === 0 ? (
+                  <div className="p-10 text-center text-gray-500">No hay jovenes asignados para este evento.</div>
+                ) : (
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-white sticky top-0 shadow-sm z-10 text-xs uppercase font-bold text-gray-400">
+                      <tr>
+                        <th className="px-6 py-4">Alumno</th>
+                        <th className="px-6 py-4">Grupo</th>
+                        <th className="px-6 py-4 text-right">Estado</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {alumnosChecklist.map((alumno) => (
+                        <tr key={alumno.usuario_id} className="hover:bg-[#F9F8F6] transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-[#211814]">{alumno.nombres} {alumno.apellidos}</div>
+                          </td>
+                          <td className="px-6 py-4 text-gray-500 font-medium">
+                             {alumno.grupo_nombre}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            
+                            {/* 👇 MAGIA AQUÍ: Si el modal está terminado, mostramos una etiqueta fija en vez del Dropdown */}
+                            {modalTerminado ? (
+                               <div className={`inline-block text-[11px] sm:text-xs font-bold uppercase px-3 py-2 rounded-xl border
+                                  ${alumno.estado_id === 1 ? 'bg-green-50 text-green-700 border-green-200' : 
+                                    alumno.estado_id === 2 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 
+                                    alumno.estado_id === 4 ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                                    'bg-red-50 text-red-700 border-red-200'}`}
+                               >
+                                 {alumno.estado_id === 1 ? '✅ Asistió' : alumno.estado_id === 2 ? '⚠️ Tarde' : alumno.estado_id === 4 ? '📝 Falta Just.' : '❌ Faltó'}
+                               </div>
+                            ) : (
+                              <EstadoDropdown 
+                                estadoId={alumno.estado_id} 
+                                onChange={(nuevoId) => handleChangeEstado(alumno.usuario_id, nuevoId)} 
+                              />
+                            )}
 
-            <div className="p-6 border-t border-gray-100 bg-white flex justify-end gap-3">
-              <button onClick={() => setIsChecklistOpen(false)} className="px-6 py-3 font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors">
-                Cancelar
-              </button>
-              <button 
-                onClick={handleGuardarAsistencia} 
-                disabled={guardandoAsistencia || loadingChecklist || alumnosChecklist.length === 0}
-                className="bg-[#5A431C] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#4a3616] flex items-center gap-2 disabled:opacity-50 transition-colors shadow-md"
-              >
-                {guardandoAsistencia ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                Guardar Asistencia
-              </button>
-            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
 
+              <div className="p-6 border-t border-gray-100 bg-white flex justify-end gap-3">
+                <button onClick={() => setIsChecklistOpen(false)} className="px-6 py-3 font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors">
+                  {modalTerminado ? 'Cerrar' : 'Cancelar'}
+                </button>
+                
+                {/* 👇 Ocultamos el botón guardar si ya caducó el evento */}
+                {!modalTerminado && (
+                  <button 
+                    onClick={handleGuardarAsistencia} 
+                    disabled={guardandoAsistencia || loadingChecklist || alumnosChecklist.length === 0}
+                    className="bg-[#5A431C] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#4a3616] flex items-center gap-2 disabled:opacity-50 transition-colors shadow-md"
+                  >
+                    {guardandoAsistencia ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                    Guardar Asistencia
+                  </button>
+                )}
+              </div>
+
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ================= MODAL CREAR EVENTO (SIN CAMBIOS, se mantiene igual) ================= */}
       {isModalOpen && (

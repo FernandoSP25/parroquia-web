@@ -207,3 +207,39 @@ export interface TipoEvento {
   icono?: string;
   color?: string;
 }
+
+
+export interface EventoResumen {
+  id: string;
+  nombre: string;
+  fecha: string;
+  hora_inicio?: string;
+  ubicacion?: string;
+  tipo_nombre: string;
+  icono: string;
+}
+
+export interface DashboardKPIs {
+  total_confirmantes: number;
+  total_catequistas: number;
+  total_grupos: number;
+  asistencia_promedio: number;
+}
+
+export interface DashboardResponse {
+  kpis: DashboardKPIs;
+  proximos_eventos: EventoResumen[];
+}
+
+
+export interface DashboardCatequistaKPIs {
+  grupo_nombre: string;
+  total_jovenes: number;
+  asistencia_promedio: number;
+  jovenes_en_riesgo: number;
+}
+
+export interface DashboardCatequistaResponse {
+  kpis: DashboardCatequistaKPIs;
+  proximos_eventos: EventoResumen[]; // Reutiliza la interfaz que ya definimos para el Admin
+}
