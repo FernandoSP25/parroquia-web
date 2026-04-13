@@ -34,6 +34,7 @@ export interface Usuario {
   roles?: string[];
   created_at?: string;
   celular?: string;
+  grupo_nombre?: string;
 }
 
 export interface UpdateUsuarioDTO {

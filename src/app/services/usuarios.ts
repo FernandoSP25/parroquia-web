@@ -46,5 +46,22 @@ export const usuarioService = {
   reactivar: async (id: string) => {
     const { data } = await api.post(`/usuarios/${id}/reactivar`);
     return data;
+  },
+
+  getMe: async () => {
+    const { data } = await api.get('/usuarios/me');
+    return data;
+  },
+  
+  updateMe: async (payload: any) => {
+    const { data } = await api.put('/usuarios/me', payload);
+    return data;
+  },
+  
+  changePassword: async (nuevaPassword: string) => {
+    // El backend espera que la variable se llame "password" dentro del JSON
+    const { data } = await api.put('/usuarios/me/password', { password: nuevaPassword });
+    return data;
   }
+
 };
