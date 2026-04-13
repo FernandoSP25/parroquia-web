@@ -79,6 +79,8 @@ export default function AdminDashboard() {
     );
   }
 
+  if (!data) return null;
+
 
   return (
     <div className="p-8 min-h-screen font-sans" style={{ backgroundColor: COLORS.bgLight }}>
