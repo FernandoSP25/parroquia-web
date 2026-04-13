@@ -1,4 +1,4 @@
-import { TipoEvento } from '@/app/types';
+
 // src/types/index.ts
 
 // Lo que enviamos al hacer login
