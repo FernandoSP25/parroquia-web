@@ -244,3 +244,11 @@ export interface DashboardCatequistaResponse {
   kpis: DashboardCatequistaKPIs;
   proximos_eventos: EventoResumen[]; // Reutiliza la interfaz que ya definimos para el Admin
 }
+
+export interface PaginatedUsuarios {
+  items: Usuario[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}

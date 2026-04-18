@@ -22,6 +22,9 @@ export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   
   // ESTADOS DE FILTROS
   const [filterRole, setFilterRole] = useState("TODOS");
@@ -59,8 +62,10 @@ export default function UsuariosPage() {
   const fetchUsuarios = async () => {
     setLoading(true);
     try {
-      const data = await usuarioService.getAll();
-      setUsuarios(data);
+      const data = await usuarioService.getAll(page, 10);
+
+      setUsuarios(data.items);
+      setTotalPages(data.pages);
     } catch (error) {
       console.error(error);
     } finally {
@@ -68,7 +73,13 @@ export default function UsuariosPage() {
     }
   };
 
-  useEffect(() => { fetchUsuarios(); }, []);
+  useEffect(() => {
+  fetchUsuarios();
+  }, [page]);
+
+  useEffect(() => {
+  setPage(1);
+}, [searchTerm, filterRole, filterGrupo]);
 
   // MANEJAR APERTURA DE MODAL
   const handleOpenCreate = () => {
@@ -130,6 +141,7 @@ export default function UsuariosPage() {
       }
       
       setIsModalOpen(false);
+      setPage(1);
       await fetchUsuarios(); 
 
     } catch (error: any) {
@@ -360,7 +372,30 @@ const getGrupoColor = (nombre?: string) => {
               </tbody>
             </table>
             
-            {/* Mensaje si no hay resultados */}
+            <div className="flex justify-center items-center gap-3 p-4 border-t border-[#EBE5E0]">
+
+              <button
+                onClick={() => setPage(prev => prev - 1)}
+                disabled={page === 1}
+                className="px-4 py-2 rounded-lg border text-sm font-bold disabled:opacity-40 hover:bg-gray-50"
+              >
+                ← Anterior
+              </button>
+
+              <span className="text-sm font-bold text-[#5A431C]">
+                Página {page} de {totalPages}
+              </span>
+
+              <button
+                onClick={() => setPage(prev => prev + 1)}
+                disabled={page === totalPages}
+                className="px-4 py-2 rounded-lg border text-sm font-bold disabled:opacity-40 hover:bg-gray-50"
+              >
+                Siguiente →
+              </button>
+
+            </div>
+
             {filteredUsers.length === 0 && (
               <div className="p-10 text-center text-gray-500 font-medium">
                 No se encontraron usuarios con esos filtros.

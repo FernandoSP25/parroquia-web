@@ -1,11 +1,17 @@
 import api from "./api"; 
-import { Usuario, CreateConfirmanteDTO, CreateCatequistaDTO, CreateAdminDTO,UpdateUsuarioDTO } from "@/app/types";
+import { Usuario, CreateConfirmanteDTO, CreateCatequistaDTO, CreateAdminDTO,UpdateUsuarioDTO, PaginatedUsuarios } from "@/app/types";
+
 
 export const usuarioService = {
-  // Listar usuarios
-  getAll: async (): Promise<Usuario[]> => {
-    const { data } = await api.get<Usuario[]>("/usuarios/", {
-      params: { _t: new Date().getTime() } 
+  
+  // Listar usuarios con paginación
+  getAll: async (page = 1, page_size = 10): Promise<PaginatedUsuarios> => {
+    const { data } = await api.get<PaginatedUsuarios>("/usuarios/", {
+      params: { 
+        page,
+        page_size,
+        _t: new Date().getTime()
+      }
     });
     return data;
   },
