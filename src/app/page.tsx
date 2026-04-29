@@ -36,9 +36,36 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error', texto: string } | null>(null);
   
+  const [visorTouched, setVisorTouched] = useState(false);
+  const [dniValido, setDniValido] = useState<boolean | null>(null);
   // Carrusel Hero
   const heroImages = [ "/hero/1.jpg", "/hero/2.jpg", "/hero/4.jpg", "/hero/7.jpg"];
   const [currentImage, setCurrentImage] = useState(0);
+
+// Pega esto ANTES del return(), junto a los otros estados
+const experiencias = [
+  {
+    id: 1,
+    titulo: "Amistad en Cristo",
+    descripcion: "Descubrirás que Jesús no es una figura lejana o un concepto aburrido, sino el amigo más fiel que camina a tu lado. Juntos, aprenderemos a escuchar su voz y seguir sus pasos.",
+    imagen: "/hero/1.jpg",
+    icono: <Users size={24} />,
+  },
+  {
+    id: 2,
+    titulo: "Sesiones Dinámicas",
+    descripcion: "Aprendemos a través del diálogo, juegos, música y reflexión profunda. Cada encuentro es una oportunidad para descubrir algo nuevo.",
+    imagen: "/hero/2.jpg",
+    icono: <Flame size={24} />,
+  },
+  {
+    id: 3,
+    titulo: "Fe en Acción",
+    descripcion: "No solo escuchamos, actuamos. Viviremos la caridad cristiana ayudando a quienes más lo necesitan a través del servicio comunitario.",
+    imagen: "/hero/4.jpg",
+    icono: <HeartHandshake size={24} />,
+  }
+];
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -235,6 +262,8 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          
           
           <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex gap-3 z-20">
             {heroImages.map((_, idx) => (
@@ -259,12 +288,13 @@ export default function Home() {
             <p className="text-gray-600">Conoce el interior de nuestra parroquia deslizando la imagen.</p>
           </div>
 
-          <div className="rounded-[2.5rem] overflow-hidden shadow-2xl border-[8px] border-white relative group h-[400px] md:h-[600px] max-w-5xl mx-auto ring-1 ring-gray-900/5">
+          <div className="rounded-[2.5rem] overflow-hidden shadow-2xl border-[8px] border-white relative group h-[400px] md:h-[600px] max-w-5xl mx-auto ring-1 ring-gray-900/5" onTouchStart={() => setVisorTouched(true)}>
             
             <Visor360 imagePath="/360/parroquia360.jpg" />
             
             {/* OVERLAY: Viñeta suave en los bordes para dar profundidad */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-transparent to-black/40 flex flex-col items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity duration-700 pointer-events-none z-10">
+            <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-transparent to-black/40 flex flex-col items-center justify-center transition-opacity duration-700 pointer-events-none z-10
+          ${visorTouched ? 'opacity-0' : 'opacity-100 group-hover:opacity-0'}`}>
               
               {/* LA ETIQUETA "ARRASTRA PARA EXPLORAR" (Elegante y animada) */}
               <div className="bg-[#F9F8F6]/95 backdrop-blur-md px-6 py-3.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.15)] border border-[#C0B1A0]/30 flex items-center gap-4 transform transition-all duration-700 group-hover:scale-95 group-hover:translate-y-4">
@@ -313,66 +343,28 @@ export default function Home() {
                 En móvil: Scroll horizontal deslizable (que "pasen así").
                 En PC: Grid de 3 columnas fijo.
             */}
-            <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-6 pb-8 md:pb-0 snap-x snap-mandatory custom-scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
-              
-              {[
-                {
-                  id: 1,
-                  titulo: "Amistad en Cristo",
-                  descripcion: "Descubrirás que Jesús no es una figura lejana o un concepto aburrido, sino el amigo más fiel que camina a tu lado. Juntos , aprenderemos a escuchar su voz y seguir sus pasos.",
-                  imagen: "/hero/1.jpg", 
-                  icono: <Users size={24} />,
-                },
-                {
-                  id: 2,
-                  titulo: "Sesiones Dinámicas",
-                  descripcion: "Aprendemos a través del diálogo, juegos, música y reflexión profunda. Cada encuentro es una oportunidad para descubrir algo nuevo.",
-                  imagen: "/hero/2.jpg", // 👈 Cambia esta ruta
-                  icono: <Flame size={24} />,
-                },
-                {
-                  id: 3,
-                  titulo: "Fe en Acción",
-                  descripcion: "No solo escuchamos, actuamos. Viviremos la caridad cristiana ayudando a quienes más lo necesitan a través del servicio comunitario.",
-                  imagen: "/hero/4.jpg", // 👈 Cambia esta ruta
-                  icono: <HeartHandshake size={24} />,
-                }
-              ].map((exp) => (
-                <div 
-                  key={exp.id} 
-                  className="group relative flex-shrink-0 w-[85vw] sm:w-[320px] md:w-auto aspect-[4/5] rounded-[2rem] overflow-hidden shadow-xl cursor-pointer snap-center border border-white/40 bg-[#211814]"
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {experiencias.map((exp, i) => (
+                <div
+                  key={exp.id}
+                  className={`relative rounded-[1.5rem] overflow-hidden shadow-lg bg-[#211814] border border-white/10
+                    ${i === 2 ? 'col-span-2 md:col-span-1 flex-row' : ''}`}
                 >
-                  {/* Imagen de fondo con zoom suave en hover */}
-                  <Image 
-                    src={exp.imagen} 
-                    alt={exp.titulo} 
-                    fill 
-                    className="object-cover transition-transform duration-[800ms] group-hover:scale-110 opacity-90 group-hover:opacity-100" 
-                    unoptimized
-                  />
-                  
-                  {/* Gradiente oscuro para que el texto sea legible (Oscurece un poco más al pasar el mouse) */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#211814] via-[#211814]/40 to-transparent transition-opacity duration-500 opacity-80 group-hover:opacity-95" />
-                  
-                  {/* Contenido de texto que se desliza hacia arriba */}
-                  <div className="absolute inset-0 p-8 flex flex-col justify-end text-white">
-                    <div className="bg-[#F9F8F6]/20 backdrop-blur-md w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-[#F9F8F6] border border-white/20 transform translate-y-4 group-hover:-translate-y-2 transition-transform duration-500">
+                  <div className="relative h-40 md:h-52">
+                    <Image src={exp.imagen} alt={exp.titulo} fill className="object-cover opacity-60" unoptimized />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#211814] via-[#211814]/20 to-transparent" />
+                  </div>
+                  <div className="p-5 text-white">
+                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3 text-white border border-white/10">
                       {exp.icono}
                     </div>
-                    <h3 className="font-serif text-2xl md:text-3xl font-bold mb-3 transform translate-y-4 group-hover:-translate-y-2 transition-transform duration-500">
-                      {exp.titulo}
-                    </h3>
-                    
-                    {/* La descripción está invisible y aparece al pasar el mouse (En móvil siempre se puede leer con un toque) */}
-                    <div className="overflow-hidden">
-                      <p className="text-[#F9F8F6]/80 text-sm leading-relaxed transform translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out">
-                        {exp.descripcion}
-                      </p>
-                    </div>
+                    <h3 className="font-serif text-lg font-bold mb-2">{exp.titulo}</h3>
+                    {/* ✅ Descripción SIEMPRE visible — sin hover */}
+                    <p className="text-white/70 text-sm leading-relaxed">{exp.descripcion}</p>
                   </div>
                 </div>
               ))}
-            </div>
+          </div>
 
             {/* BANNER INFERIOR: El Requisito (Separado para que destaque) */}
             <div className="mt-16 bg-white border border-[#C0B1A0]/30 p-6 md:p-8 rounded-3xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 max-w-4xl mx-auto transform transition-transform hover:-translate-y-1 hover:shadow-md">
@@ -411,7 +403,15 @@ export default function Home() {
 
             <form onSubmit={handleSubmit} className="bg-white/5 backdrop-blur-md border border-white/10 p-8 md:p-10 rounded-3xl text-left shadow-2xl">
               
-
+              <div className="mb-8">
+                <div className="flex justify-between text-xs text-white/40 mb-2">
+                  <span>Progreso del formulario</span>
+                  <span>Sección 1 de 2</span>
+                </div>
+                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#D1B28A] rounded-full w-1/2 transition-all duration-500" />
+                </div>
+              </div>
               {/* GRUPO 1: DATOS JOVEN */}
               <div className="mb-8 border-b border-white/10 pb-8">
                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
@@ -427,9 +427,40 @@ export default function Home() {
                     <input name="apellidos" type="text" placeholder="Ej. Pérez López" className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#D1B28A] transition-colors" required />
                   </div>
                   <div className="md:col-span-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-[#D1B28A] mb-2">DNI *</label>
-                    <input name="dni" type="tel" maxLength={8} placeholder="8 dígitos" className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#D1B28A] transition-colors" required />
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#D1B28A] mb-2">
+                    DNI *
+                  </label>
+                  <div className="relative">
+                    <input
+                      name="dni"
+                      type="tel"
+                      maxLength={8}
+                      placeholder="8 dígitos"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        e.target.value = val;
+                        if (val.length === 0) setDniValido(null);
+                        else setDniValido(val.length === 8);
+                      }}
+                      className={`w-full bg-black/20 border rounded-xl px-4 py-3 text-white placeholder-white/30 
+                        focus:outline-none transition-colors
+                        ${dniValido === null ? 'border-white/10 focus:border-[#D1B28A]'
+                          : dniValido ? 'border-emerald-500/60' : 'border-red-500/60'}`}
+                      required
+                    />
+                    {/* Indicador visual derecho */}
+                    {dniValido !== null && (
+                      <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold
+                        ${dniValido ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {dniValido ? '✓' : '✗'}
+                      </div>
+                    )}
                   </div>
+                  {/* Hint dinámico */}
+                  {dniValido === false && (
+                    <p className="text-red-400 text-xs mt-1.5">El DNI debe tener exactamente 8 dígitos</p>
+                  )}
+                </div>
 
                   <div className="md:col-span-1">
                     <label className="block text-xs font-bold uppercase tracking-wider text-white/50 mb-2">Fecha de Nacimiento *</label>

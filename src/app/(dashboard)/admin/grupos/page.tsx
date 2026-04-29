@@ -196,30 +196,35 @@ export default function GruposPage() {
            </div>
         ) : data ? (
           <div className="h-full overflow-x-auto overflow-y-hidden">
-            <div className="flex min-h-full p-8 gap-8 w-max">
-              {/* SIN ASIGNAR */}
-              <ColumnaGrupo
-                grupoId={null}
-                titulo={viewMode === 'CONFIRMANTES' ? 'Jóvenes sin grupo' : 'Catequistas disponibles'}
-                items={getSinAsignar()}
-                esSinAsignar={true}
-                tipoVista={viewMode}
-              />
+            {/* 👇 1. CAMBIAMOS min-h-full POR h-full y ajustamos paddings 👇 */}
+            <div className="flex h-full p-6 gap-6 w-max items-stretch pb-8">
+              
+              {/* 👇 2. ENVOLVEMOS LA COLUMNA PARA LIMITAR SU ALTURA 👇 */}
+              <div className="h-full flex flex-col shrink-0">
+                <ColumnaGrupo
+                  grupoId={null}
+                  titulo={viewMode === 'CONFIRMANTES' ? 'Jóvenes sin grupo' : 'Catequistas disponibles'}
+                  items={getSinAsignar()}
+                  esSinAsignar={true}
+                  tipoVista={viewMode}
+                />
+              </div>
 
               {/* DIVISOR */}
-              <div className="w-px bg-[#E5DED6] my-6"></div>
+              <div className="w-px bg-[#E5DED6] my-4 shrink-0"></div>
 
               {/* GRUPOS */}
               {data.grupos.map((grupo: any) => (
-                <ColumnaGrupo
-                  key={grupo.id}
-                  grupoId={grupo.id}
-                  titulo={grupo.nombre}
-                  capacidad={grupo.capacidad_maxima}
-                  inscritos={grupo.total_inscritos}
-                  items={getItemsGrupo(grupo)}
-                  tipoVista={viewMode}
-                />
+                <div key={grupo.id} className="h-full flex flex-col shrink-0">
+                  <ColumnaGrupo
+                    grupoId={grupo.id}
+                    titulo={grupo.nombre}
+                    capacidad={grupo.capacidad_maxima}
+                    inscritos={grupo.total_inscritos}
+                    items={getItemsGrupo(grupo)}
+                    tipoVista={viewMode}
+                  />
+                </div>
               ))}
             </div>
           </div>
