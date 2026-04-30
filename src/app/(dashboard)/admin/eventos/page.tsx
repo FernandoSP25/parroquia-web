@@ -13,6 +13,7 @@ import {
   Loader2,
   X,
   Users,
+  Info,
   CheckCircle,
   AlertCircle,
   ClipboardList,
@@ -26,6 +27,8 @@ import Swal from 'sweetalert2';
 import { useJsApiLoader, GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
 import { useRef  } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
 
 registerLocale('es', es);
 
@@ -39,6 +42,46 @@ interface AlumnoChecklist {
   estado_id: number;
   observaciones: string | null;
 }
+
+type EstadoAsistencia = {
+  id: number;
+  nombre: string;
+  icono: string;
+  tone: {
+    text: string;
+    bg: string;
+    border: string;
+    hover: string;
+  };
+};
+
+const ESTADOS_ASISTENCIA: EstadoAsistencia[] = [
+  { id: 1, nombre: 'Asistio (A)', icono: '✅', tone: { text: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200', hover: 'hover:bg-green-100' } },
+  { id: 2, nombre: 'Tarde (T)', icono: '⚠️', tone: { text: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-200', hover: 'hover:bg-yellow-100' } },
+  { id: 3, nombre: 'Falto (F)', icono: '❌', tone: { text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', hover: 'hover:bg-red-100' } },
+  { id: 4, nombre: 'Falta Justificada (FJ)', icono: '📝', tone: { text: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', hover: 'hover:bg-blue-100' } },
+  { id: 5, nombre: 'Retiro Espiritual', icono: '🙏', tone: { text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', hover: 'hover:bg-emerald-100' } },
+  { id: 6, nombre: 'Confesion Grupal', icono: '✝️', tone: { text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', hover: 'hover:bg-orange-100' } },
+  { id: 7, nombre: 'Servicio Comunitario', icono: '🤝', tone: { text: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', hover: 'hover:bg-teal-100' } },
+  { id: 8, nombre: 'Otro', icono: '📌', tone: { text: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200', hover: 'hover:bg-gray-100' } },
+];
+
+const getEstadoVisual = (estadoId: number): EstadoAsistencia => {
+  const known = ESTADOS_ASISTENCIA.find((estado) => estado.id === estadoId);
+  if (known) return known;
+
+  return {
+    id: estadoId,
+    nombre: `Estado ${estadoId}`,
+    icono: '🟤',
+    tone: {
+      text: 'text-[#5A431C]',
+      bg: 'bg-[#F9F3EA]',
+      border: 'border-[#C0B1A0]',
+      hover: 'hover:bg-[#EFE5D8]',
+    },
+  };
+};
 
 const EstadoDropdown = ({ 
   estadoId, 
@@ -61,34 +104,25 @@ const EstadoDropdown = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // AQUÍ ESTÁ LA ACTUALIZACIÓN: Los 4 estados exactos (A, T, F, FJ)
-  const estados = [
-    { id: 1, label: 'Asistió (A)', icon: '✅', textColor: 'text-green-700', bgColor: 'bg-green-50', borderColor: 'border-green-200', hoverColor: 'hover:bg-green-100' },
-    { id: 2, label: 'Tarde (T)', icon: '⚠️', textColor: 'text-yellow-700', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200', hoverColor: 'hover:bg-yellow-100' },
-    { id: 3, label: 'Faltó (F)', icon: '❌', textColor: 'text-red-700', bgColor: 'bg-red-50', borderColor: 'border-red-200', hoverColor: 'hover:bg-red-100' },
-    { id: 4, label: 'Falta Just. (FJ)', icon: '📝', textColor: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200', hoverColor: 'hover:bg-blue-100' },
-  ];
-
-  // Si por algún motivo el ID no existe, cae por defecto en "Faltó"
-  const actual = estados.find(e => e.id === estadoId) || estados[2];
+  const actual = getEstadoVisual(estadoId);
 
   return (
-    <div className={`relative inline-block text-left w-36 ${isOpen ? 'z-50' : 'z-10'}`} ref={dropdownRef}>
+    <div className={`relative inline-block text-left w-48 ${isOpen ? 'z-50' : 'z-10'}`} ref={dropdownRef}>
 
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full px-3 py-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-xl border transition-all duration-200 shadow-sm
-          ${actual.bgColor} ${actual.textColor} ${actual.borderColor} hover:opacity-80`}
+        className={`flex items-center justify-between w-full px-3 py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-xl border transition-all duration-200 shadow-sm
+          ${actual.tone.bg} ${actual.tone.text} ${actual.tone.border} hover:opacity-90`}
       >
-        <span className="flex items-center gap-1.5 whitespace-nowrap">{actual.icon} {actual.label}</span>
+        <span className="flex items-center gap-1.5 whitespace-nowrap truncate">{actual.icono} {actual.nombre}</span>
         <ChevronDown size={14} className={`transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Menú Desplegable */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-xl shadow-xl border border-[#C0B1A0]/30 z-[999] overflow-hidden py-1 animate-fade-in-up">
-          {estados.map((est) => (
+        <div className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-[#C0B1A0]/30 z-[999] overflow-hidden py-1 animate-fade-in-up max-h-72 overflow-y-auto">
+          {ESTADOS_ASISTENCIA.map((est) => (
             <button
               key={est.id}
               type="button"
@@ -98,9 +132,9 @@ const EstadoDropdown = ({
               }}
               className={`w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase transition-colors
                 ${estadoId === est.id ? 'bg-gray-50' : 'bg-white'} 
-                ${est.hoverColor} ${est.textColor}`}
+                ${est.tone.hover} ${est.tone.text}`}
             >
-              {est.icon} {est.label}
+              {est.icono} {est.nombre}
             </button>
           ))}
         </div>
@@ -119,6 +153,12 @@ const isEventoFinalizado = (fechaStr: string, horaFinStr?: string) => {
   return ahora > fechaEvento; // Devuelve TRUE si ya pasó la hora
 };
 
+const TIPOS_ESTATICOS = [
+  { id: 1, nombre: 'Clases de Catequesis', icono: '📚', color: 'text-blue-700 bg-blue-50 border-blue-200' },
+  { id: 2, nombre: 'Misas Dominicales', icono: '⛪', color: 'text-amber-700 bg-amber-50 border-amber-200' },
+  { id: 3, nombre: 'Retiros y Jornadas', icono: '🕊️', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+];
+
 export default function EventosPage() {
   const { user } = useAuth();
   const ROL_ACTUAL = user?.roles?.[0] || 'ADMIN';
@@ -126,6 +166,9 @@ export default function EventosPage() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroVista, setFiltroVista] = useState<'PROXIMOS' | 'PASADOS'>('PROXIMOS');
+  const [selectedTipo, setSelectedTipo] = useState<number | null>(null);
+  const [eventosHistorial, setEventosHistorial] = useState<Evento[]>([]);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   // MAPAS
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
@@ -211,16 +254,8 @@ export default function EventosPage() {
   const fetchEventos = async () => {
     try {
       setLoading(true);
-      // Nota: Asegúrate de que el backend te devuelva TODOS los eventos aquí
-      const data = await eventoService.getAll();
-      
-      // Filtramos usando la exactitud de minutos y horas
-      const filtrados = data.filter(e => {
-        const terminado = isEventoFinalizado(e.fecha, e.hora_fin);
-        return filtroVista === 'PROXIMOS' ? !terminado : terminado;
-      });
-      
-      setEventos(filtrados);
+      const data = await eventoService.getProximos();
+      setEventos(data);
     } catch (error) {
       console.error("Error cargando eventos:", error);
     } finally {
@@ -229,8 +264,26 @@ export default function EventosPage() {
   };
 
   useEffect(() => {
-    fetchEventos();
+    if (filtroVista === 'PROXIMOS') {
+      fetchEventos();
+    }
   }, [filtroVista]);
+
+  const handleSelectTipo = async (tipoId: number) => {
+    setSelectedTipo(tipoId);
+    setLoadingHistorial(true);
+    setEventosHistorial([]);
+    
+    try {
+      const data = await eventoService.getHistorialPorTipo(tipoId);
+      setEventosHistorial(data);
+    } catch (error) {
+      console.error("Error al cargar historial", error);
+      setEventosHistorial([]);
+    } finally {
+      setLoadingHistorial(false);
+    }
+  };
 
   const cerrarModal = () => {
     setIsModalOpen(false);
@@ -433,7 +486,82 @@ export default function EventosPage() {
 
       {/* LISTA DE EVENTOS */}
       <div className="max-w-5xl mx-auto px-6 py-10">
-        {loading ? (
+        {filtroVista === 'PASADOS' ? (
+          <div className="space-y-6">
+            <div className="bg-white border border-[#E8E2DA] rounded-3xl p-5 shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                <div>
+                  <h2 className="font-serif font-bold text-xl text-[#211814]">Historial por categoria</h2>
+                  <p className="text-sm text-[#8B7355]">Selecciona un tipo para ver y gestionar su registro historico.</p>
+                </div>
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F3EEE7] text-[#5A431C] text-xs font-bold border border-[#E5D8C8]">
+                  <Calendar size={14} />
+                  Vista inteligente
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {TIPOS_ESTATICOS.map((tipo) => (
+                <button
+                  key={tipo.id}
+                  onClick={() => handleSelectTipo(tipo.id)}
+                  className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all duration-200 shadow-sm
+                    ${selectedTipo === tipo.id 
+                      ? `${tipo.color} shadow-md scale-[1.02] ring-2 ring-[#C0B1A0]/40 ring-offset-2`
+                      : 'bg-[#FFFCF8] border-[#E8E2DA] hover:bg-[#F9F8F6] hover:border-[#C0B1A0] text-[#5A431C]'
+                    }`}
+                >
+                  <span className="text-3xl mb-2">{tipo.icono}</span>
+                  <span className="font-bold">{tipo.nombre}</span>
+                </button>
+              ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-sm border border-[#EBE5E0] min-h-[300px] p-6">
+              {!selectedTipo && !loadingHistorial && (
+                <div className="h-full flex flex-col items-center justify-center text-center text-[#8B7355] pt-12">
+                  <Calendar size={48} className="mb-4 opacity-50" />
+                  <h3 className="text-lg font-bold">Selecciona una categoría</h3>
+                  <p className="text-sm mt-1">Elige un tipo de evento arriba para cargar su historial.</p>
+                </div>
+              )}
+
+              {loadingHistorial && (
+                <div className="h-full flex flex-col items-center justify-center text-[#5A431C] pt-12">
+                  <Loader2 className="animate-spin mb-2" size={32} />
+                  <p className="font-medium">Cargando registros...</p>
+                </div>
+              )}
+
+              {selectedTipo && !loadingHistorial && eventosHistorial.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-center text-[#8B7355] pt-12">
+                  <Info size={48} className="mb-4 opacity-50" />
+                  <h3 className="text-lg font-bold">No hay registros</h3>
+                  <p className="text-sm mt-1">Aún no se han creado eventos de este tipo.</p>
+                </div>
+              )}
+
+              {selectedTipo && !loadingHistorial && eventosHistorial.length > 0 && (
+                <div className="space-y-3 animate-in fade-in">
+                  {eventosHistorial.map((ev) => (
+                    <div key={ev.id} className="p-4 rounded-2xl border border-[#E8E2DA] hover:bg-[#F9F8F6] transition-colors flex justify-between items-center">
+                      <div>
+                        <h4 className="font-bold text-[#211814] text-lg">{ev.nombre}</h4>
+                        <p className="text-sm text-gray-500">{ev.fecha} | {ev.hora_inicio || 'Sin hora registrada'}</p>
+                      </div>
+                      <button
+                        onClick={() => handleAbrirChecklist(ev)}
+                        className="flex items-center gap-2 bg-[#F3F1ED] text-[#5A431C] px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-[#E0D9D2] transition-colors border border-[#DDD1C2]"
+                      >
+                        <Users size={16} /> Ver Asistencias
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-[#5A431C]">
             <Loader2 className="animate-spin mb-4" size={40} />
             <p className="font-serif font-bold animate-pulse">Sincronizando agenda...</p>
@@ -552,14 +680,13 @@ export default function EventosPage() {
                             
                             {/* 👇 MAGIA AQUÍ: Si el modal está terminado, mostramos una etiqueta fija en vez del Dropdown */}
                             {modalTerminado ? (
-                               <div className={`inline-block text-[11px] sm:text-xs font-bold uppercase px-3 py-2 rounded-xl border
-                                  ${alumno.estado_id === 1 ? 'bg-green-50 text-green-700 border-green-200' : 
-                                    alumno.estado_id === 2 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 
-                                    alumno.estado_id === 4 ? 'bg-blue-50 text-blue-700 border-blue-200' : 
-                                    'bg-red-50 text-red-700 border-red-200'}`}
-                               >
-                                 {alumno.estado_id === 1 ? '✅ Asistió' : alumno.estado_id === 2 ? '⚠️ Tarde' : alumno.estado_id === 4 ? '📝 Falta Just.' : '❌ Faltó'}
-                               </div>
+                              <div className={`inline-block text-[11px] sm:text-xs font-bold uppercase px-3 py-2 rounded-xl border
+                                ${getEstadoVisual(alumno.estado_id).tone.bg}
+                                ${getEstadoVisual(alumno.estado_id).tone.text}
+                                ${getEstadoVisual(alumno.estado_id).tone.border}`}
+                              >
+                                {getEstadoVisual(alumno.estado_id).icono} {getEstadoVisual(alumno.estado_id).nombre}
+                              </div>
                             ) : (
                               <EstadoDropdown 
                                 estadoId={alumno.estado_id} 
