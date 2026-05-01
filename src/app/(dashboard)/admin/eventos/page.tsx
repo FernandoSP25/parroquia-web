@@ -13,7 +13,6 @@ import {
   Loader2,
   X,
   Users,
-  Info,
   CheckCircle,
   AlertCircle,
   ClipboardList,
@@ -55,25 +54,22 @@ type EstadoAsistencia = {
   };
 };
 
-const ESTADOS_ASISTENCIA: EstadoAsistencia[] = [
-  { id: 1, nombre: 'Asistio (A)', icono: '✅', tone: { text: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200', hover: 'hover:bg-green-100' } },
-  { id: 2, nombre: 'Tarde (T)', icono: '⚠️', tone: { text: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-200', hover: 'hover:bg-yellow-100' } },
-  { id: 3, nombre: 'Falto (F)', icono: '❌', tone: { text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', hover: 'hover:bg-red-100' } },
-  { id: 4, nombre: 'Falta Justificada (FJ)', icono: '📝', tone: { text: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', hover: 'hover:bg-blue-100' } },
-  { id: 5, nombre: 'Retiro Espiritual', icono: '🙏', tone: { text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', hover: 'hover:bg-emerald-100' } },
-  { id: 6, nombre: 'Confesion Grupal', icono: '✝️', tone: { text: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', hover: 'hover:bg-orange-100' } },
-  { id: 7, nombre: 'Servicio Comunitario', icono: '🤝', tone: { text: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', hover: 'hover:bg-teal-100' } },
-  { id: 8, nombre: 'Otro', icono: '📌', tone: { text: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200', hover: 'hover:bg-gray-100' } },
+// Solo estos 4 IDs son estados de asistencia válidos para el checklist (backend).
+const OPCIONES_ESTADO_ASISTENCIA: EstadoAsistencia[] = [
+  { id: 1, nombre: 'Asistió', icono: '✅', tone: { text: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200', hover: 'hover:bg-green-100' } },
+  { id: 2, nombre: 'Tardanza', icono: '⚠️', tone: { text: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-200', hover: 'hover:bg-yellow-100' } },
+  { id: 3, nombre: 'Falta', icono: '❌', tone: { text: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', hover: 'hover:bg-red-100' } },
+  { id: 4, nombre: 'Falta justificada', icono: '📝', tone: { text: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', hover: 'hover:bg-blue-100' } },
 ];
 
 const getEstadoVisual = (estadoId: number): EstadoAsistencia => {
-  const known = ESTADOS_ASISTENCIA.find((estado) => estado.id === estadoId);
+  const known = OPCIONES_ESTADO_ASISTENCIA.find((estado) => estado.id === estadoId);
   if (known) return known;
 
   return {
     id: estadoId,
     nombre: `Estado ${estadoId}`,
-    icono: '🟤',
+    icono: '❔',
     tone: {
       text: 'text-[#5A431C]',
       bg: 'bg-[#F9F3EA]',
@@ -107,34 +103,46 @@ const EstadoDropdown = ({
   const actual = getEstadoVisual(estadoId);
 
   return (
-    <div className={`relative inline-block text-left w-48 ${isOpen ? 'z-50' : 'z-10'}`} ref={dropdownRef}>
-
+    <div className={`relative inline-block text-left min-w-[10.5rem] sm:min-w-[11.5rem] ${isOpen ? 'z-[60]' : 'z-10'}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full px-3 py-2.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-xl border transition-all duration-200 shadow-sm
-          ${actual.tone.bg} ${actual.tone.text} ${actual.tone.border} hover:opacity-90`}
+        className={`flex w-full items-center justify-between gap-2 px-3.5 py-2 text-[13px] font-medium leading-snug rounded-[11px]
+          border border-[#E0D6CB] bg-white/95 text-[#211814]
+          shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(33,24,20,0.06)]
+          transition-all duration-200 hover:bg-[#FDFCFA] hover:border-[#CBBBA8] active:scale-[0.99]
+          ${isOpen ? 'ring-[1.5px] ring-[#5A431C]/30 border-[#C0B1A0]' : ''}`}
       >
-        <span className="flex items-center gap-1.5 whitespace-nowrap truncate">{actual.icono} {actual.nombre}</span>
-        <ChevronDown size={14} className={`transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="flex min-w-0 items-center gap-2 truncate tabular-nums">
+          <span className="shrink-0 text-base leading-none">{actual.icono}</span>
+          <span className="truncate">{actual.nombre}</span>
+        </span>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-[#9A8875] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          strokeWidth={2}
+        />
       </button>
 
-      {/* Menú Desplegable */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-[#C0B1A0]/30 z-[999] overflow-hidden py-1 animate-fade-in-up max-h-72 overflow-y-auto">
-          {ESTADOS_ASISTENCIA.map((est) => (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-[999] mt-2 w-[13.5rem] overflow-hidden rounded-2xl border border-black/[0.06] bg-[#FDFCFB]/98 py-1.5 shadow-[0_24px_64px_-12px_rgba(33,24,20,0.22),0_0_1px_rgba(33,24,20,0.12)] backdrop-blur-xl ring-1 ring-white/70"
+        >
+          {OPCIONES_ESTADO_ASISTENCIA.map((est) => (
             <button
               key={est.id}
+              role="menuitem"
               type="button"
               onClick={() => {
                 onChange(est.id);
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase transition-colors
-                ${estadoId === est.id ? 'bg-gray-50' : 'bg-white'} 
-                ${est.tone.hover} ${est.tone.text}`}
+              className={`flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-[13px] font-medium tracking-tight transition-colors
+                ${estadoId === est.id ? 'bg-[#5A431C]/8 text-[#5A431C]' : 'text-[#211814] hover:bg-black/[0.04]'}`}
             >
-              {est.icono} {est.nombre}
+              <span className="text-base leading-none">{est.icono}</span>
+              {est.nombre}
             </button>
           ))}
         </div>
@@ -153,22 +161,14 @@ const isEventoFinalizado = (fechaStr: string, horaFinStr?: string) => {
   return ahora > fechaEvento; // Devuelve TRUE si ya pasó la hora
 };
 
-const TIPOS_ESTATICOS = [
-  { id: 1, nombre: 'Clases de Catequesis', icono: '📚', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-  { id: 2, nombre: 'Misas Dominicales', icono: '⛪', color: 'text-amber-700 bg-amber-50 border-amber-200' },
-  { id: 3, nombre: 'Retiros y Jornadas', icono: '🕊️', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-];
-
 export default function EventosPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const ROL_ACTUAL = user?.roles?.[0] || 'ADMIN';
 
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroVista, setFiltroVista] = useState<'PROXIMOS' | 'PASADOS'>('PROXIMOS');
-  const [selectedTipo, setSelectedTipo] = useState<number | null>(null);
-  const [eventosHistorial, setEventosHistorial] = useState<Evento[]>([]);
-  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   // MAPAS
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
@@ -184,11 +184,17 @@ export default function EventosPage() {
   const [horaFin, setHoraFin] = useState("");
 
   const [tiposEvento, setTiposEvento] = useState<TipoEvento[]>([]);
+  const [loadingTipos, setLoadingTipos] = useState(true);
 
   useEffect(() => {
     const loadTipos = async () => {
-      const data = await tipoEventoService.getAll();
-      setTiposEvento(data);
+      try {
+        setLoadingTipos(true);
+        const data = await tipoEventoService.getAll();
+        setTiposEvento(data);
+      } finally {
+        setLoadingTipos(false);
+      }
     };
     loadTipos();
   }, []);
@@ -269,21 +275,31 @@ export default function EventosPage() {
     }
   }, [filtroVista]);
 
-  const handleSelectTipo = async (tipoId: number) => {
-    setSelectedTipo(tipoId);
-    setLoadingHistorial(true);
-    setEventosHistorial([]);
-    
-    try {
-      const data = await eventoService.getHistorialPorTipo(tipoId);
-      setEventosHistorial(data);
-    } catch (error) {
-      console.error("Error al cargar historial", error);
-      setEventosHistorial([]);
-    } finally {
-      setLoadingHistorial(false);
-    }
+  const toTipoSlug = (nombre: string) =>
+    nombre
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-');
+
+  const handleGoToAsistenciasTipo = (tipoNombre: string) => {
+    // Navegamos por nombre (slug legible) en vez de numero
+    const tipoSlug = toTipoSlug(tipoNombre);
+    router.push(`/admin/eventos/asistencias/${tipoSlug}`);
   };
+
+  const resumenProximos = useMemo(() => {
+    const obligatorios = eventos.filter((evento) => evento.obligatorio).length;
+    const hoy = eventos.filter((evento) => evento.fecha === today).length;
+
+    return {
+      total: eventos.length,
+      obligatorios,
+      hoy,
+    };
+  }, [eventos, today]);
 
   const cerrarModal = () => {
     setIsModalOpen(false);
@@ -462,21 +478,21 @@ export default function EventosPage() {
   
 
   return (
-    <div className="min-h-screen bg-[#F9F8F6] pb-20 relative font-sans text-[#211814]">
+    <div className="min-h-screen bg-gradient-to-b from-[#FCFAF7] via-[#F9F8F6] to-[#F6F2EC] pb-20 relative font-sans text-[#211814]">
       {/* HEADER */}
-      <div className="bg-white border-b border-[#C0B1A0]/30 px-6 py-6 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white/85 backdrop-blur-md border-b border-[#C0B1A0]/30 px-4 sm:px-6 py-4 sm:py-5 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#211814]">Control de Asistencia</h1>
-            <p className="text-sm text-gray-500 mt-1">Gestiona eventos y la asistencia de tus grupos</p>
+            <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#211814] tracking-tight">Control de Asistencia</h1>
+            <p className="text-xs sm:text-sm text-[#8B7355] mt-1">Gestiona eventos y asistencias con una experiencia clara y moderna</p>
           </div>
-          <div className="flex w-full md:w-auto items-center gap-4">
-            <div className="bg-[#F9F8F6] p-1.5 rounded-xl flex border border-[#C0B1A0]/30 flex-1 md:flex-none">
-              <button onClick={() => setFiltroVista('PROXIMOS')} className={`flex-1 md:px-6 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${filtroVista === 'PROXIMOS' ? 'bg-white text-[#5A431C] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Próximos</button>
-              <button onClick={() => setFiltroVista('PASADOS')} className={`flex-1 md:px-6 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${filtroVista === 'PASADOS' ? 'bg-white text-[#5A431C] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>Historial</button>
+          <div className="flex w-full md:w-auto items-center gap-3">
+            <div className="bg-[#F7F3ED] p-1 rounded-2xl flex border border-[#C0B1A0]/30 flex-1 md:flex-none shadow-inner">
+              <button onClick={() => setFiltroVista('PROXIMOS')} className={`flex-1 md:px-6 px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ${filtroVista === 'PROXIMOS' ? 'bg-white text-[#5A431C] shadow-sm' : 'text-[#9A8B7A] hover:text-[#6C583A]'}`}>Próximos</button>
+              <button onClick={() => setFiltroVista('PASADOS')} className={`flex-1 md:px-6 px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ${filtroVista === 'PASADOS' ? 'bg-white text-[#5A431C] shadow-sm' : 'text-[#9A8B7A] hover:text-[#6C583A]'}`}>Historial</button>
             </div>
             {ROL_ACTUAL === 'ADMIN' && (
-              <button onClick={() => setIsModalOpen(true)} className="bg-[#5A431C] hover:bg-[#4a3616] text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold tracking-wide transition-transform active:scale-95 shadow-md shrink-0">
+              <button onClick={() => setIsModalOpen(true)} className="bg-[#5A431C] hover:bg-[#4a3616] text-white px-4 sm:px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold tracking-wide transition-transform active:scale-95 shadow-md shrink-0">
                 <Plus size={18} /> <span className="hidden sm:inline">Nuevo</span>
               </button>
             )}
@@ -485,80 +501,59 @@ export default function EventosPage() {
       </div>
 
       {/* LISTA DE EVENTOS */}
-      <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+          <div className="rounded-2xl bg-white border border-[#E8E2DA] p-4 shadow-sm">
+            <p className="text-[11px] uppercase tracking-wider text-[#8B7355] font-bold">Eventos Proximos</p>
+            <p className="text-2xl font-serif font-bold text-[#211814] mt-1">{resumenProximos.total}</p>
+          </div>
+          <div className="rounded-2xl bg-white border border-[#E8E2DA] p-4 shadow-sm">
+            <p className="text-[11px] uppercase tracking-wider text-[#8B7355] font-bold">Obligatorios</p>
+            <p className="text-2xl font-serif font-bold text-[#211814] mt-1">{resumenProximos.obligatorios}</p>
+          </div>
+          <div className="rounded-2xl bg-white border border-[#E8E2DA] p-4 shadow-sm col-span-2 lg:col-span-1">
+            <p className="text-[11px] uppercase tracking-wider text-[#8B7355] font-bold">Programados Hoy</p>
+            <p className="text-2xl font-serif font-bold text-[#211814] mt-1">{resumenProximos.hoy}</p>
+          </div>
+        </div>
+
         {filtroVista === 'PASADOS' ? (
           <div className="space-y-6">
-            <div className="bg-white border border-[#E8E2DA] rounded-3xl p-5 shadow-sm">
+            <div className="bg-white/95 border border-[#E8E2DA] rounded-3xl p-4 sm:p-6 shadow-sm">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <div>
                   <h2 className="font-serif font-bold text-xl text-[#211814]">Historial por categoria</h2>
-                  <p className="text-sm text-[#8B7355]">Selecciona un tipo para ver y gestionar su registro historico.</p>
+                  <p className="text-sm text-[#8B7355]">Selecciona un tipo real para continuar a la pantalla de asistencias.</p>
                 </div>
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F3EEE7] text-[#5A431C] text-xs font-bold border border-[#E5D8C8]">
                   <Calendar size={14} />
                   Vista inteligente
                 </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {TIPOS_ESTATICOS.map((tipo) => (
-                <button
-                  key={tipo.id}
-                  onClick={() => handleSelectTipo(tipo.id)}
-                  className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all duration-200 shadow-sm
-                    ${selectedTipo === tipo.id 
-                      ? `${tipo.color} shadow-md scale-[1.02] ring-2 ring-[#C0B1A0]/40 ring-offset-2`
-                      : 'bg-[#FFFCF8] border-[#E8E2DA] hover:bg-[#F9F8F6] hover:border-[#C0B1A0] text-[#5A431C]'
-                    }`}
-                >
-                  <span className="text-3xl mb-2">{tipo.icono}</span>
-                  <span className="font-bold">{tipo.nombre}</span>
-                </button>
-              ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {loadingTipos && Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    key={`skeleton-tipo-${index}`}
+                    className="h-32 rounded-2xl border border-[#E8E2DA] bg-gradient-to-r from-[#FBF8F3] via-[#F3EEE7] to-[#FBF8F3] animate-pulse"
+                  />
+                ))}
+
+                {!loadingTipos && tiposEvento.map((tipo) => (
+                  <button
+                    key={tipo.id}
+                    onClick={() => handleGoToAsistenciasTipo(tipo.nombre)}
+                    className="group flex flex-col items-center justify-center p-5 sm:p-6 rounded-2xl border transition-all duration-300 shadow-sm bg-[#FFFCF8] border-[#E8E2DA] hover:bg-[#F9F8F6] hover:border-[#C0B1A0] text-[#5A431C] hover:scale-[1.01] hover:shadow-md"
+                  >
+                    <span className="text-3xl mb-2 transition-transform duration-300 group-hover:scale-110">{tipo.icono || '📌'}</span>
+                    <span className="font-bold text-center text-sm sm:text-base">{tipo.nombre}</span>
+                  </button>
+                ))}
+                {!loadingTipos && tiposEvento.length === 0 && (
+                  <div className="md:col-span-3 bg-[#F9F8F6] border border-dashed border-[#C0B1A0]/60 rounded-2xl p-8 text-center">
+                    <p className="text-[#8B7355] font-medium">No hay tipos de evento disponibles para mostrar.</p>
+                  </div>
+                )}
               </div>
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-sm border border-[#EBE5E0] min-h-[300px] p-6">
-              {!selectedTipo && !loadingHistorial && (
-                <div className="h-full flex flex-col items-center justify-center text-center text-[#8B7355] pt-12">
-                  <Calendar size={48} className="mb-4 opacity-50" />
-                  <h3 className="text-lg font-bold">Selecciona una categoría</h3>
-                  <p className="text-sm mt-1">Elige un tipo de evento arriba para cargar su historial.</p>
-                </div>
-              )}
-
-              {loadingHistorial && (
-                <div className="h-full flex flex-col items-center justify-center text-[#5A431C] pt-12">
-                  <Loader2 className="animate-spin mb-2" size={32} />
-                  <p className="font-medium">Cargando registros...</p>
-                </div>
-              )}
-
-              {selectedTipo && !loadingHistorial && eventosHistorial.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center text-[#8B7355] pt-12">
-                  <Info size={48} className="mb-4 opacity-50" />
-                  <h3 className="text-lg font-bold">No hay registros</h3>
-                  <p className="text-sm mt-1">Aún no se han creado eventos de este tipo.</p>
-                </div>
-              )}
-
-              {selectedTipo && !loadingHistorial && eventosHistorial.length > 0 && (
-                <div className="space-y-3 animate-in fade-in">
-                  {eventosHistorial.map((ev) => (
-                    <div key={ev.id} className="p-4 rounded-2xl border border-[#E8E2DA] hover:bg-[#F9F8F6] transition-colors flex justify-between items-center">
-                      <div>
-                        <h4 className="font-bold text-[#211814] text-lg">{ev.nombre}</h4>
-                        <p className="text-sm text-gray-500">{ev.fecha} | {ev.hora_inicio || 'Sin hora registrada'}</p>
-                      </div>
-                      <button
-                        onClick={() => handleAbrirChecklist(ev)}
-                        className="flex items-center gap-2 bg-[#F3F1ED] text-[#5A431C] px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-[#E0D9D2] transition-colors border border-[#DDD1C2]"
-                      >
-                        <Users size={16} /> Ver Asistencias
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         ) : loading ? (
@@ -567,13 +562,13 @@ export default function EventosPage() {
             <p className="font-serif font-bold animate-pulse">Sincronizando agenda...</p>
           </div>
         ) : eventos.length === 0 ? (
-          <div className="bg-white border-2 border-dashed border-[#C0B1A0]/50 rounded-[2rem] p-16 flex flex-col items-center justify-center text-center shadow-sm">
+          <div className="bg-white border-2 border-dashed border-[#C0B1A0]/50 rounded-[2rem] p-8 sm:p-16 flex flex-col items-center justify-center text-center shadow-sm">
             <div className="w-20 h-20 bg-[#F9F8F6] text-[#C0B1A0] rounded-full flex items-center justify-center mb-4"><Calendar size={40} /></div>
             <h3 className="text-2xl font-serif font-bold text-[#211814] mb-2">Agenda limpia</h3>
             <p className="text-gray-500 max-w-sm">No hay eventos programados en esta categoría.</p>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid xl:grid-cols-2 gap-4 sm:gap-6">
             {eventos.map((evento) => {
               const { dia, mes, diaSemana } = formatFecha(evento.fecha);
               
@@ -581,17 +576,17 @@ export default function EventosPage() {
               const eventoTerminado = isEventoFinalizado(evento.fecha, evento.hora_fin);
 
               return (
-                <div key={evento.id} className={`bg-white rounded-[2rem] border shadow-sm hover:shadow-lg transition-all duration-300 flex overflow-hidden group relative ${eventoTerminado ? 'border-gray-200 opacity-80' : 'border-[#C0B1A0]/30'}`}>
+                <div key={evento.id} className={`bg-white rounded-[1.6rem] sm:rounded-[2rem] border shadow-sm hover:shadow-lg transition-all duration-300 flex overflow-hidden group relative ${eventoTerminado ? 'border-gray-200 opacity-80' : 'border-[#C0B1A0]/30'}`}>
                   
                   {evento.obligatorio && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#ca8a04] z-10"></div>}
 
-                  <div className="bg-[#F9F8F6] w-28 flex flex-col items-center justify-center p-4 border-r border-gray-200 shrink-0">
+                  <div className="bg-[#F9F8F6] w-24 sm:w-28 flex flex-col items-center justify-center p-3 sm:p-4 border-r border-gray-200 shrink-0">
                     <span className="text-xs font-bold text-[#5A431C] uppercase tracking-widest mb-1">{mes}</span>
                     <span className="text-4xl font-serif font-bold text-[#211814]">{dia}</span>
                     <span className="text-[10px] text-gray-400 uppercase tracking-wide mt-2">{diaSemana}</span>
                   </div>
                   
-                  <div className="p-6 flex-1 flex flex-col justify-between relative">
+                  <div className="p-4 sm:p-6 flex-1 flex flex-col justify-between relative">
                     
                     {/* 👇 2. Solo mostramos el botón de Eliminar si NO ha terminado */}
                     {!eventoTerminado && (
@@ -604,15 +599,15 @@ export default function EventosPage() {
                       </button>
                     )}
 
-                    <div className="pr-6">
-                      <h3 className="font-serif font-bold text-xl leading-tight group-hover:text-[#5A431C] transition-colors line-clamp-2">{evento.nombre}</h3>
-                      <div className="text-sm text-gray-500 mt-3 space-y-1.5 font-medium">
+                    <div className="pr-4 sm:pr-6">
+                      <h3 className="font-serif font-bold text-lg sm:text-xl leading-tight group-hover:text-[#5A431C] transition-colors line-clamp-2">{evento.nombre}</h3>
+                      <div className="text-xs sm:text-sm text-gray-500 mt-3 space-y-1.5 font-medium">
                         {evento.hora_inicio && (<div className="flex items-center gap-2"><Clock size={16} className="text-[#C0B1A0]" />{formatHora(evento.hora_inicio)} {evento.hora_fin ? `- ${formatHora(evento.hora_fin)}` : ''}</div>)}
                         {evento.ubicacion && (<div className="flex items-center gap-2"><MapPin size={16} className="text-[#C0B1A0]" /><span className="truncate">{evento.ubicacion}</span></div>)}
                       </div>
                     </div>
 
-                    <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap sm:flex-nowrap gap-4 justify-start items-center">
+                    <div className="mt-4 sm:mt-5 pt-4 border-t border-gray-100 flex flex-wrap sm:flex-nowrap gap-3 sm:gap-4 justify-start items-center">
                     <div className="flex -space-x-2 opacity-70 shrink-0">
                       <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-gray-500"><Users size={14}/></div>
                     </div>
@@ -639,87 +634,146 @@ export default function EventosPage() {
         const modalTerminado = isEventoFinalizado(eventoSeleccionado.fecha, eventoSeleccionado.hora_fin);
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-[2rem] w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-              
-              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#F9F8F6]">
-                <div>
-                  <h3 className="font-serif font-bold text-2xl text-[#211814]">{eventoSeleccionado.nombre}</h3>
-                  <p className="text-sm text-gray-500 font-medium mt-1">Lista de Confirmantes • {formatFecha(eventoSeleccionado.fecha).dia} de {formatFecha(eventoSeleccionado.fecha).mes}</p>
-                </div>
-                <button onClick={() => setIsChecklistOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
-              </div>
+          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-6 bg-[#211814]/28 backdrop-blur-md">
+            <div
+              className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-t-[1.25rem] bg-[#FDFCFA] shadow-[0_32px_100px_-20px_rgba(33,24,20,0.35),inset_0_1px_0_rgba(255,255,255,0.75)] animate-in fade-in zoom-in-95 duration-200 sm:rounded-[22px] sm:ring-1 sm:ring-black/[0.06] max-h-[min(94vh,calc(100dvh-env(safe-area-inset-bottom)-1rem))]"
+            >
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent" />
 
-              <div className="flex-1 overflow-y-auto p-0 pb-32 min-h-[250px]">
+              <header className="shrink-0 px-5 pt-5 pb-4 sm:px-7 sm:pt-6 sm:pb-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {modalTerminado ? (
+                        <span className="inline-flex items-center rounded-full border border-[#C0B1A0]/50 bg-[#F3EEE7] px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-[#5A431C]">
+                          Solo lectura
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full border border-[#C0B1A0]/40 bg-white/80 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-[#8B7355]">
+                          Tomar asistencia
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-serif text-[1.35rem] font-semibold leading-tight tracking-tight text-[#211814] sm:text-[1.6rem]">
+                      {eventoSeleccionado.nombre}
+                    </h3>
+                    <p className="text-[13px] leading-relaxed text-[#8B7355]">
+                      {formatFecha(eventoSeleccionado.fecha).diaSemana},{' '}
+                      {formatFecha(eventoSeleccionado.fecha).dia}{' '}
+                      {formatFecha(eventoSeleccionado.fecha).mes}. Lista de confirmantes.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsChecklistOpen(false)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.04] text-[#6B5847] transition hover:bg-black/[0.07] active:scale-95"
+                    aria-label={modalTerminado ? 'Cerrar' : 'Cancelar'}
+                  >
+                    <X size={18} strokeWidth={2} />
+                  </button>
+                </div>
+              </header>
+
+              <div className="mx-5 h-px bg-[#211814]/10 sm:mx-7" />
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-7 sm:py-5">
                 {loadingChecklist ? (
-                   <div className="flex flex-col items-center justify-center py-20 text-[#5A431C]">
-                     <Loader2 className="animate-spin mb-4" size={40} />
-                     <p className="font-bold">Cargando jovenes...</p>
+                   <div className="flex flex-col items-center justify-center py-16 text-[#5A431C]">
+                     <Loader2 className="mb-3 animate-spin opacity-70" size={32} strokeWidth={2} />
+                     <p className="text-sm font-medium text-[#8B7355]">Cargando confirmantes...</p>
                    </div>
                 ) : alumnosChecklist.length === 0 ? (
-                  <div className="p-10 text-center text-gray-500">No hay jovenes asignados para este evento.</div>
+                  <div className="rounded-2xl border border-dashed border-[#C0B1A0]/55 bg-[#FFFCFA] px-6 py-12 text-center">
+                    <p className="text-sm font-medium text-[#211814]">No hay confirmantes en este evento</p>
+                    <p className="mt-1 text-[13px] text-[#8B7355]">Cuando exista una lista asignada, aparecerá aquí.</p>
+                  </div>
                 ) : (
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-white sticky top-0 shadow-sm z-10 text-xs uppercase font-bold text-gray-400">
+                  <div className="overflow-hidden rounded-[14px] border border-[#E6DED4] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_3px_rgba(33,24,20,0.05)]">
+                    <table className="w-full border-collapse text-left text-[13px] sm:text-[14px]">
+                      <thead className="sticky top-0 z-10 bg-[#FAFAF9]/92 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B7355] backdrop-blur-md">
                       <tr>
-                        <th className="px-6 py-4">Alumno</th>
-                        <th className="px-6 py-4">Grupo</th>
-                        <th className="px-6 py-4 text-right">Estado</th>
+                        <th
+                          scope="col"
+                          className="w-10 min-w-[2.5rem] whitespace-nowrap border-b border-[#EEEBE6] px-2 py-3 text-center font-semibold tabular-nums text-[#5A431C] sm:w-11"
+                          title="Número de fila"
+                        >
+                          #
+                        </th>
+                        <th className="border-b border-[#EEEBE6] px-3 py-3 sm:px-4">Nombre</th>
+                        <th className="border-b border-[#EEEBE6] px-3 py-3 text-[#8B7355] sm:px-4">Grupo</th>
+                        <th className="border-b border-[#EEEBE6] px-3 py-3 text-right sm:px-4">Estado</th>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {alumnosChecklist.map((alumno) => (
-                        <tr key={alumno.usuario_id} className="hover:bg-[#F9F8F6] transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="font-bold text-[#211814]">{alumno.nombres} {alumno.apellidos}</div>
+                      </thead>
+                      <tbody>
+                      {alumnosChecklist.map((alumno, rowIndex) => (
+                        <tr key={alumno.usuario_id} className="transition-colors hover:bg-[#FBF9F7]">
+                          <td className="border-b border-[#F4F1ED] px-2 py-3 text-center align-middle tabular-nums text-[13px] font-semibold text-[#5A431C] sm:py-3.5">
+                            {rowIndex + 1}
                           </td>
-                          <td className="px-6 py-4 text-gray-500 font-medium">
+                          <td className="border-b border-[#F4F1ED] px-3 py-3 align-middle font-medium text-[#211814] sm:px-4 sm:py-3.5">
+                            {alumno.nombres} {alumno.apellidos}
+                          </td>
+                          <td className="border-b border-[#F4F1ED] px-3 py-3 align-middle text-[13px] text-[#8B7355] sm:px-4 sm:py-3.5">
                              {alumno.grupo_nombre}
                           </td>
-                          <td className="px-6 py-4 text-right">
-                            
-                            {/* 👇 MAGIA AQUÍ: Si el modal está terminado, mostramos una etiqueta fija en vez del Dropdown */}
+                          <td className="border-b border-[#F4F1ED] px-3 py-3 align-middle text-right sm:px-4 sm:py-3.5">
                             {modalTerminado ? (
-                              <div className={`inline-block text-[11px] sm:text-xs font-bold uppercase px-3 py-2 rounded-xl border
+                              <div
+                                className={`inline-flex max-w-full items-center gap-2 rounded-[10px] border px-2.5 py-1.5 text-[12px] font-medium leading-snug shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]
                                 ${getEstadoVisual(alumno.estado_id).tone.bg}
                                 ${getEstadoVisual(alumno.estado_id).tone.text}
                                 ${getEstadoVisual(alumno.estado_id).tone.border}`}
                               >
-                                {getEstadoVisual(alumno.estado_id).icono} {getEstadoVisual(alumno.estado_id).nombre}
+                                <span>{getEstadoVisual(alumno.estado_id).icono}</span>
+                                <span>{getEstadoVisual(alumno.estado_id).nombre}</span>
                               </div>
                             ) : (
+                              <div className="flex justify-end">
                               <EstadoDropdown 
                                 estadoId={alumno.estado_id} 
                                 onChange={(nuevoId) => handleChangeEstado(alumno.usuario_id, nuevoId)} 
                               />
+                              </div>
                             )}
-
                           </td>
                         </tr>
                       ))}
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
 
-              <div className="p-6 border-t border-gray-100 bg-white flex justify-end gap-3">
-                <button onClick={() => setIsChecklistOpen(false)} className="px-6 py-3 font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors">
-                  {modalTerminado ? 'Cerrar' : 'Cancelar'}
-                </button>
-                
-                {/* 👇 Ocultamos el botón guardar si ya caducó el evento */}
-                {!modalTerminado && (
-                  <button 
-                    onClick={handleGuardarAsistencia} 
-                    disabled={guardandoAsistencia || loadingChecklist || alumnosChecklist.length === 0}
-                    className="bg-[#5A431C] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#4a3616] flex items-center gap-2 disabled:opacity-50 transition-colors shadow-md"
-                  >
-                    {guardandoAsistencia ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    Guardar Asistencia
-                  </button>
-                )}
-              </div>
+              <footer className="shrink-0 border-t border-[#211814]/10 bg-[#FAFAFA]/92 px-5 py-4 backdrop-blur-md sm:px-7 sm:py-4">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <p className="text-center text-[12px] text-[#9A8875] sm:text-left tabular-nums">
+                    {!loadingChecklist && alumnosChecklist.length > 0
+                      ? `${alumnosChecklist.length} confirmante${alumnosChecklist.length === 1 ? '' : 's'}`
+                      : '\u00A0'}
+                  </p>
+                  <div className="flex items-center justify-stretch gap-2 sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsChecklistOpen(false)}
+                      className="flex min-h-[44px] flex-1 items-center justify-center rounded-xl px-4 text-[14px] font-semibold text-[#5A431C] transition hover:bg-black/[0.04] active:scale-[0.99] sm:flex-initial sm:min-h-0 sm:rounded-[11px] sm:px-5 sm:py-2.5"
+                    >
+                      {modalTerminado ? 'Cerrar' : 'Cancelar'}
+                    </button>
 
+                    {!modalTerminado && (
+                      <button 
+                        type="button"
+                        onClick={handleGuardarAsistencia} 
+                        disabled={guardandoAsistencia || loadingChecklist || alumnosChecklist.length === 0}
+                        className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-[#5A431C] px-5 text-[14px] font-semibold text-white shadow-[inset_0_-1px_0_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-[#4a3616] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45 sm:flex-initial sm:min-h-0 sm:rounded-[11px] sm:px-6 sm:py-2.5"
+                      >
+                        {guardandoAsistencia ? <Loader2 size={18} className="animate-spin opacity-95" strokeWidth={2} /> : <Save size={18} strokeWidth={2} />}
+                        Guardar asistencia
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </footer>
             </div>
           </div>
         );
