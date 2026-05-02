@@ -28,6 +28,7 @@ interface AlumnoChecklist {
   grupo_nombre: string;
   estado_id: number;
   observaciones: string | null;
+  rol_persona?: string;
 }
 
 type EstadoAsistencia = {
@@ -590,7 +591,10 @@ useEffect(() => {
 
       {isChecklistOpen && eventoSeleccionado && (() => {
         const modalTerminado = isEventoFinalizado(eventoSeleccionado.fecha, eventoSeleccionado.hora_fin);
-
+        const isCatequistas = eventoSeleccionado.dirigido_a === 'CATEQUISTAS';
+        const isTodos = eventoSeleccionado.dirigido_a === 'TODOS';
+        const labelPlural = isCatequistas ? 'catequistas' : isTodos ? 'participantes' : 'confirmantes';
+        const labelSingular = isCatequistas ? 'catequista' : isTodos ? 'participante' : 'confirmante';
         return (
           <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-6 bg-[#211814]/28 backdrop-blur-md">
             <div
@@ -618,7 +622,7 @@ useEffect(() => {
                     <p className="text-[13px] leading-relaxed text-[#8B7355]">
                       {formatFecha(eventoSeleccionado.fecha).diaSemana},{' '}
                       {formatFecha(eventoSeleccionado.fecha).dia}{' '}
-                      {formatFecha(eventoSeleccionado.fecha).mes}. Lista de confirmantes.
+                      {formatFecha(eventoSeleccionado.fecha).mes}. Lista de {labelPlural}. {/* TEXTO DINÁMICO */}
                     </p>
                   </div>
                   <button
@@ -638,11 +642,11 @@ useEffect(() => {
                 {loadingChecklist ? (
                    <div className="flex flex-col items-center justify-center py-16 text-[#5A431C]">
                      <Loader2 className="mb-3 animate-spin opacity-70" size={32} strokeWidth={2} />
-                     <p className="text-sm font-medium text-[#8B7355]">Cargando confirmantes...</p>
+                     <p className="text-sm font-medium text-[#8B7355]">Cargando {labelPlural}...</p> {/* TEXTO DINÁMICO */}
                    </div>
                 ) : alumnosChecklist.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-[#C0B1A0]/55 bg-[#FFFCFA] px-6 py-12 text-center">
-                    <p className="text-sm font-medium text-[#211814]">No hay confirmantes en este evento</p>
+                    <p className="text-sm font-medium text-[#211814]">No hay {labelPlural} en este evento</p> {/* TEXTO DINÁMICO */}
                     <p className="mt-1 text-[13px] text-[#8B7355]">Cuando exista una lista asignada, aparecerá aquí.</p>
                   </div>
                 ) : (
@@ -670,6 +674,10 @@ useEffect(() => {
                           </td>
                           <td className="border-b border-[#F4F1ED] px-3 py-3 align-middle font-medium text-[#211814] sm:px-4 sm:py-3.5">
                             {alumno.nombres} {alumno.apellidos}
+                            {/* BONUS: Si el backend manda rol_persona, puedes mostrarlo aquí como un badge opcional */}
+                            {alumno.rol_persona === 'CATEQUISTA' && (
+                               <span className="ml-2 inline-flex items-center rounded-full bg-[#5A431C]/10 px-2 py-0.5 text-[10px] font-bold text-[#5A431C]">Profesor</span>
+                            )}
                           </td>
                           <td className="border-b border-[#F4F1ED] px-3 py-3 align-middle text-[13px] text-[#8B7355] sm:px-4 sm:py-3.5">
                              {alumno.grupo_nombre}
@@ -705,8 +713,9 @@ useEffect(() => {
               <footer className="shrink-0 border-t border-[#211814]/10 bg-[#FAFAFA]/92 px-5 py-4 backdrop-blur-md sm:px-7 sm:py-4">
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                   <p className="text-center text-[12px] text-[#9A8875] sm:text-left tabular-nums">
+                    {/* TEXTO DINÁMICO EN EL CONTEO FINAL */}
                     {!loadingChecklist && alumnosChecklist.length > 0
-                      ? `${alumnosChecklist.length} confirmante${alumnosChecklist.length === 1 ? '' : 's'}`
+                      ? `${alumnosChecklist.length} ${labelSingular}${alumnosChecklist.length === 1 ? '' : 's'}`
                       : '\u00A0'}
                   </p>
                   <div className="flex items-center justify-stretch gap-2 sm:justify-end">

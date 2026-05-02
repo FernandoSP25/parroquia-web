@@ -168,6 +168,7 @@ export interface Evento {
   max_asistentes?: number;
   requiere_confirmacion: boolean;
   activo: boolean;
+  dirigido_a: 'TODOS' | 'CONFIRMANTES' | 'CATEQUISTAS';
 }
 
 export interface GenerarQrRequest {
