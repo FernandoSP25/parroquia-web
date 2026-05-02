@@ -252,3 +252,41 @@ export interface PaginatedUsuarios {
   page_size: number;
   pages: number;
 }
+
+export type EstadoCelda = 'PRESENTE' | 'FALTA' | 'TARDANZA' | 'FALTA_JUSTIFICADA';
+
+export interface EventoMatriz {
+  id: string;
+  fecha: string;
+  nombre: string;
+}
+
+export interface PersonaMatriz {
+  id: string;
+  nombres: string;
+  apellidos: string;
+  etiqueta: string | null; // El backend envía "San Pedro", "San Martín", etc.
+}
+
+export interface RegistroAsistenciaMatriz {
+  personaId: string;
+  eventoId: string;
+  estado: EstadoCelda;
+}
+
+// La respuesta completa que envía tu endpoint
+export interface MatrizResponse {
+  eventos: EventoMatriz[];
+  personas: PersonaMatriz[];
+  asistencias: RegistroAsistenciaMatriz[];
+}
+
+export interface AsistenciaUpdate {
+  usuario_id: string;
+  estado_id: number;
+  observaciones: string | null;
+}
+
+export interface AsistenciaMasivaPayload {
+  asistencias: AsistenciaUpdate[];
+}

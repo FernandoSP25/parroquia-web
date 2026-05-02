@@ -478,63 +478,48 @@ export default function EventosPage() {
   
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FCFAF7] via-[#F9F8F6] to-[#F6F2EC] pb-20 relative font-sans text-[#211814]">
-      {/* HEADER */}
-      <div className="bg-white/85 backdrop-blur-md border-b border-[#C0B1A0]/30 px-4 sm:px-6 py-4 sm:py-5 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#211814] tracking-tight">Control de Asistencia</h1>
-            <p className="text-xs sm:text-sm text-[#8B7355] mt-1">Gestiona eventos y asistencias con una experiencia clara y moderna</p>
-          </div>
-          <div className="flex w-full md:w-auto items-center gap-3">
-            <div className="bg-[#F7F3ED] p-1 rounded-2xl flex border border-[#C0B1A0]/30 flex-1 md:flex-none shadow-inner">
-              <button onClick={() => setFiltroVista('PROXIMOS')} className={`flex-1 md:px-6 px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ${filtroVista === 'PROXIMOS' ? 'bg-white text-[#5A431C] shadow-sm' : 'text-[#9A8B7A] hover:text-[#6C583A]'}`}>Próximos</button>
-              <button onClick={() => setFiltroVista('PASADOS')} className={`flex-1 md:px-6 px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ${filtroVista === 'PASADOS' ? 'bg-white text-[#5A431C] shadow-sm' : 'text-[#9A8B7A] hover:text-[#6C583A]'}`}>Historial</button>
-            </div>
-            {ROL_ACTUAL === 'ADMIN' && (
-              <button onClick={() => setIsModalOpen(true)} className="bg-[#5A431C] hover:bg-[#4a3616] text-white px-4 sm:px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold tracking-wide transition-transform active:scale-95 shadow-md shrink-0">
-                <Plus size={18} /> <span className="hidden sm:inline">Nuevo</span>
-              </button>
-            )}
-          </div>
+    <div className="absolute inset-4 md:inset-8 flex flex-col rounded-3xl shadow-sm border border-white/60 bg-[#F9F8F6]/70 backdrop-blur-xl overflow-hidden ring-1 ring-[#E8E2DA]/50 font-sans text-[#211814]">
+      
+      <header className="flex shrink-0 flex-col gap-4 border-b border-[#E8E2DA]/50 bg-white/40 px-5 sm:px-8 py-5 sm:py-6 lg:flex-row lg:items-center lg:justify-between z-30">
+        <div className="flex flex-col">
+          <h1 className="text-2xl md:text-[28px] font-semibold text-[#211814] tracking-tight leading-tight">Control de Asistencia</h1>
+          <p className="text-[13px] font-medium text-[#8B7355]/80 mt-1.5">Gestiona eventos y asistencias con una experiencia clara y moderna</p>
         </div>
-      </div>
+        <div className="flex w-full md:w-auto items-center gap-4">
+          <div className="bg-white/50 backdrop-blur-md p-1.5 rounded-2xl flex border border-white/80 flex-1 md:flex-none shadow-sm ring-1 ring-black/[0.03]">
+            <button onClick={() => setFiltroVista('PROXIMOS')} className={`flex-1 md:px-7 px-5 py-2.5 text-[13px] font-semibold tracking-wide rounded-[14px] transition-all duration-300 ${filtroVista === 'PROXIMOS' ? 'bg-white text-[#5A431C] shadow-sm ring-1 ring-black/[0.04]' : 'text-[#8B7355] hover:text-[#5A431C] hover:bg-white/40'}`}>Próximos</button>
+            <button onClick={() => setFiltroVista('PASADOS')} className={`flex-1 md:px-7 px-5 py-2.5 text-[13px] font-semibold tracking-wide rounded-[14px] transition-all duration-300 ${filtroVista === 'PASADOS' ? 'bg-white text-[#5A431C] shadow-sm ring-1 ring-black/[0.04]' : 'text-[#8B7355] hover:text-[#5A431C] hover:bg-white/40'}`}>Historial</button>
+          </div>
+          {ROL_ACTUAL === 'ADMIN' && (
+            <button onClick={() => setIsModalOpen(true)} className="bg-[#5A431C] hover:bg-[#4a3616] text-white px-5 sm:px-6 py-3 rounded-[14px] flex items-center justify-center gap-2.5 text-[13px] font-semibold tracking-wide transition-all active:scale-95 shadow-sm ring-1 ring-inset ring-black/10 shrink-0">
+              <Plus size={18} strokeWidth={2.5} /> <span className="hidden sm:inline">Nuevo Evento</span>
+            </button>
+          )}
+        </div>
+      </header>
 
       {/* LISTA DE EVENTOS */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-          <div className="rounded-2xl bg-white border border-[#E8E2DA] p-4 shadow-sm">
-            <p className="text-[11px] uppercase tracking-wider text-[#8B7355] font-bold">Eventos Proximos</p>
-            <p className="text-2xl font-serif font-bold text-[#211814] mt-1">{resumenProximos.total}</p>
-          </div>
-          <div className="rounded-2xl bg-white border border-[#E8E2DA] p-4 shadow-sm">
-            <p className="text-[11px] uppercase tracking-wider text-[#8B7355] font-bold">Obligatorios</p>
-            <p className="text-2xl font-serif font-bold text-[#211814] mt-1">{resumenProximos.obligatorios}</p>
-          </div>
-          <div className="rounded-2xl bg-white border border-[#E8E2DA] p-4 shadow-sm col-span-2 lg:col-span-1">
-            <p className="text-[11px] uppercase tracking-wider text-[#8B7355] font-bold">Programados Hoy</p>
-            <p className="text-2xl font-serif font-bold text-[#211814] mt-1">{resumenProximos.hoy}</p>
-          </div>
-        </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar bg-transparent">
+        <div className="max-w-[1400px] mx-auto px-5 sm:px-8 py-8 sm:py-10">
 
         {filtroVista === 'PASADOS' ? (
           <div className="space-y-6">
-            <div className="bg-white/95 border border-[#E8E2DA] rounded-3xl p-4 sm:p-6 shadow-sm">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+            <div className="bg-white/60 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 sm:p-8 shadow-sm ring-1 ring-black/5">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="font-serif font-bold text-xl text-[#211814]">Historial por categoria</h2>
-                  <p className="text-sm text-[#8B7355]">Selecciona un tipo real para continuar a la pantalla de asistencias.</p>
+                  <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#211814]">Historial por categoría</h2>
+                  <p className="text-sm font-medium text-[#8B7355]/80 mt-1">Selecciona una categoría para revisar las asistencias pasadas.</p>
                 </div>
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F3EEE7] text-[#5A431C] text-xs font-bold border border-[#E5D8C8]">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/5 text-[#5A431C] text-[11px] font-semibold uppercase tracking-wider backdrop-blur-md">
                   <Calendar size={14} />
-                  Vista inteligente
+                  Vista Inteligente
                 </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                 {loadingTipos && Array.from({ length: 6 }).map((_, index) => (
                   <div
                     key={`skeleton-tipo-${index}`}
-                    className="h-32 rounded-2xl border border-[#E8E2DA] bg-gradient-to-r from-[#FBF8F3] via-[#F3EEE7] to-[#FBF8F3] animate-pulse"
+                    className="h-36 rounded-[1.5rem] border border-white/60 bg-white/40 backdrop-blur-md animate-pulse shadow-sm"
                   />
                 ))}
 
@@ -542,33 +527,33 @@ export default function EventosPage() {
                   <button
                     key={tipo.id}
                     onClick={() => handleGoToAsistenciasTipo(tipo.nombre)}
-                    className="group flex flex-col items-center justify-center p-5 sm:p-6 rounded-2xl border transition-all duration-300 shadow-sm bg-[#FFFCF8] border-[#E8E2DA] hover:bg-[#F9F8F6] hover:border-[#C0B1A0] text-[#5A431C] hover:scale-[1.01] hover:shadow-md"
+                    className="group flex flex-col items-center justify-center p-6 sm:p-8 rounded-[1.5rem] border border-white/80 bg-white/60 backdrop-blur-md shadow-sm transition-all duration-300 hover:bg-white/90 hover:scale-[1.02] hover:shadow-md hover:border-white ring-1 ring-black/[0.03]"
                   >
-                    <span className="text-3xl mb-2 transition-transform duration-300 group-hover:scale-110">{tipo.icono || '📌'}</span>
-                    <span className="font-bold text-center text-sm sm:text-base">{tipo.nombre}</span>
+                    <span className="text-4xl mb-3 transition-transform duration-300 group-hover:scale-110 drop-shadow-sm">{tipo.icono || '📌'}</span>
+                    <span className="font-semibold text-center text-[15px] text-[#211814]">{tipo.nombre}</span>
                   </button>
                 ))}
                 {!loadingTipos && tiposEvento.length === 0 && (
-                  <div className="md:col-span-3 bg-[#F9F8F6] border border-dashed border-[#C0B1A0]/60 rounded-2xl p-8 text-center">
-                    <p className="text-[#8B7355] font-medium">No hay tipos de evento disponibles para mostrar.</p>
+                  <div className="md:col-span-3 bg-white/40 backdrop-blur-md border border-dashed border-black/10 rounded-[1.5rem] p-10 text-center">
+                    <p className="text-[#8B7355] font-medium text-[15px]">No hay tipos de evento disponibles para mostrar.</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
         ) : loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-[#5A431C]">
-            <Loader2 className="animate-spin mb-4" size={40} />
-            <p className="font-serif font-bold animate-pulse">Sincronizando agenda...</p>
+          <div className="flex flex-col items-center justify-center py-24 text-[#5A431C]">
+            <Loader2 className="animate-spin mb-4 opacity-80" size={44} strokeWidth={1.5} />
+            <p className="text-[15px] font-medium tracking-tight animate-pulse text-[#8B7355]">Sincronizando agenda...</p>
           </div>
         ) : eventos.length === 0 ? (
-          <div className="bg-white border-2 border-dashed border-[#C0B1A0]/50 rounded-[2rem] p-8 sm:p-16 flex flex-col items-center justify-center text-center shadow-sm">
-            <div className="w-20 h-20 bg-[#F9F8F6] text-[#C0B1A0] rounded-full flex items-center justify-center mb-4"><Calendar size={40} /></div>
-            <h3 className="text-2xl font-serif font-bold text-[#211814] mb-2">Agenda limpia</h3>
-            <p className="text-gray-500 max-w-sm">No hay eventos programados en esta categoría.</p>
+          <div className="bg-white/60 backdrop-blur-xl border border-white/60 ring-1 ring-black/5 rounded-[2rem] p-10 sm:p-20 flex flex-col items-center justify-center text-center shadow-sm">
+            <div className="w-24 h-24 bg-white/80 text-[#9A8875] rounded-full flex items-center justify-center mb-6 shadow-sm ring-1 ring-black/5"><Calendar size={44} strokeWidth={1.5} /></div>
+            <h3 className="text-[22px] font-semibold tracking-tight text-[#211814] mb-2">Agenda despejada</h3>
+            <p className="text-[15px] font-medium text-[#8B7355]/80 max-w-sm">No tienes próximos eventos programados por el momento.</p>
           </div>
         ) : (
-          <div className="grid xl:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid xl:grid-cols-2 gap-5 sm:gap-6">
             {eventos.map((evento) => {
               const { dia, mes, diaSemana } = formatFecha(evento.fecha);
               
@@ -576,48 +561,48 @@ export default function EventosPage() {
               const eventoTerminado = isEventoFinalizado(evento.fecha, evento.hora_fin);
 
               return (
-                <div key={evento.id} className={`bg-white rounded-[1.6rem] sm:rounded-[2rem] border shadow-sm hover:shadow-lg transition-all duration-300 flex overflow-hidden group relative ${eventoTerminado ? 'border-gray-200 opacity-80' : 'border-[#C0B1A0]/30'}`}>
+                <div key={evento.id} className={`bg-white/70 backdrop-blur-xl rounded-[1.75rem] sm:rounded-[2rem] border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] ring-1 ring-black/[0.03] transition-all duration-300 flex overflow-hidden group relative ${eventoTerminado ? 'opacity-70 grayscale-[0.2]' : ''}`}>
                   
-                  {evento.obligatorio && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#ca8a04] z-10"></div>}
+                  {evento.obligatorio && <div className="absolute left-0 top-0 bottom-0 w-[5px] bg-amber-500/80 z-10 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>}
 
-                  <div className="bg-[#F9F8F6] w-24 sm:w-28 flex flex-col items-center justify-center p-3 sm:p-4 border-r border-gray-200 shrink-0">
-                    <span className="text-xs font-bold text-[#5A431C] uppercase tracking-widest mb-1">{mes}</span>
-                    <span className="text-4xl font-serif font-bold text-[#211814]">{dia}</span>
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wide mt-2">{diaSemana}</span>
+                  <div className="bg-black/[0.02] w-28 sm:w-32 flex flex-col items-center justify-center p-4 sm:p-5 border-r border-black/[0.04] shrink-0 backdrop-blur-sm">
+                    <span className="text-[11px] font-bold text-[#8B7355] uppercase tracking-[0.2em] mb-1.5">{mes}</span>
+                    <span className="text-[40px] leading-none font-semibold tracking-tighter text-[#211814]">{dia}</span>
+                    <span className="text-[10px] font-semibold text-[#9A8875] uppercase tracking-[0.15em] mt-2.5">{diaSemana}</span>
                   </div>
                   
-                  <div className="p-4 sm:p-6 flex-1 flex flex-col justify-between relative">
+                  <div className="p-5 sm:p-7 flex-1 flex flex-col justify-between relative bg-white/40">
                     
                     {/* 👇 2. Solo mostramos el botón de Eliminar si NO ha terminado */}
                     {!eventoTerminado && (
                       <button 
                         onClick={() => handleEliminarEvento(evento.id)} 
-                        className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50"
+                        className="absolute top-5 right-5 text-black/20 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50/80 backdrop-blur-md"
                         title="Eliminar evento"
                       >
-                        <X size={18} />
+                        <X size={18} strokeWidth={2.5} />
                       </button>
                     )}
 
-                    <div className="pr-4 sm:pr-6">
-                      <h3 className="font-serif font-bold text-lg sm:text-xl leading-tight group-hover:text-[#5A431C] transition-colors line-clamp-2">{evento.nombre}</h3>
-                      <div className="text-xs sm:text-sm text-gray-500 mt-3 space-y-1.5 font-medium">
-                        {evento.hora_inicio && (<div className="flex items-center gap-2"><Clock size={16} className="text-[#C0B1A0]" />{formatHora(evento.hora_inicio)} {evento.hora_fin ? `- ${formatHora(evento.hora_fin)}` : ''}</div>)}
-                        {evento.ubicacion && (<div className="flex items-center gap-2"><MapPin size={16} className="text-[#C0B1A0]" /><span className="truncate">{evento.ubicacion}</span></div>)}
+                    <div className="pr-8 sm:pr-10">
+                      <h3 className="text-[19px] sm:text-[21px] font-semibold tracking-tight leading-[1.2] text-[#211814] group-hover:text-[#5A431C] transition-colors line-clamp-2">{evento.nombre}</h3>
+                      <div className="text-[13px] sm:text-[14px] font-medium text-[#8B7355]/90 mt-3.5 space-y-2">
+                        {evento.hora_inicio && (<div className="flex items-center gap-2.5"><Clock size={16} className="text-[#C0B1A0] shrink-0" />{formatHora(evento.hora_inicio)} {evento.hora_fin ? `- ${formatHora(evento.hora_fin)}` : ''}</div>)}
+                        {evento.ubicacion && (<div className="flex items-center gap-2.5"><MapPin size={16} className="text-[#C0B1A0] shrink-0" /><span className="truncate">{evento.ubicacion}</span></div>)}
                       </div>
                     </div>
 
-                    <div className="mt-4 sm:mt-5 pt-4 border-t border-gray-100 flex flex-wrap sm:flex-nowrap gap-3 sm:gap-4 justify-start items-center">
-                    <div className="flex -space-x-2 opacity-70 shrink-0">
-                      <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-gray-500"><Users size={14}/></div>
+                    <div className="mt-5 sm:mt-6 pt-5 border-t border-black/[0.04] flex flex-wrap sm:flex-nowrap gap-3 sm:gap-4 justify-start items-center">
+                    <div className="flex -space-x-2.5 opacity-80 shrink-0">
+                      <div className="w-8 h-8 rounded-full border-2 border-white bg-black/5 flex items-center justify-center text-black/40 backdrop-blur-md shadow-sm"><Users size={14} strokeWidth={2.5}/></div>
                     </div>
                     
                     <button 
                       onClick={() => handleAbrirChecklist(evento)} 
-                      className={`w-full sm:w-auto justify-center px-4 sm:px-5 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md shrink-0
-                        ${eventoTerminado ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-[#5A431C] hover:bg-[#4a3616] text-white'}`}
+                      className={`w-full sm:w-auto justify-center px-5 py-2.5 rounded-[14px] text-[12px] font-semibold tracking-wide flex items-center gap-2 transition-all shadow-sm ring-1 ring-inset shrink-0
+                        ${eventoTerminado ? 'bg-black/5 text-[#5A431C] ring-black/10 hover:bg-black/10' : 'bg-white text-[#5A431C] ring-black/5 hover:bg-[#FDFCFB] hover:shadow-md'}`}
                     >
-                      <ClipboardList size={16} className="shrink-0" /> 
+                      <ClipboardList size={16} strokeWidth={2} className="shrink-0 opacity-80" /> 
                       <span className="truncate">{eventoTerminado ? 'Ver Registro' : 'Tomar Asistencia'}</span>
                     </button>
                   </div>
@@ -965,6 +950,7 @@ export default function EventosPage() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
