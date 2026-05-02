@@ -3,30 +3,18 @@
 import { useEffect, useState, useMemo } from 'react';
 import { eventoService } from '@/app/services/eventos'; // Asegúrate de tener este servicio
 import { asistenciaService } from '@/app/services/asistencia';
-import { Evento, TipoEvento } from '@/app/types';
+import { Evento, TipoEvento ,Grupo} from '@/app/types';
 import { tipoEventoService } from '@/app/services/tipoEvento'; // Asegúrate de que la ruta sea correcta
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  Plus,
-  Loader2,
-  X,
-  Users,
-  CheckCircle,
-  AlertCircle,
-  ClipboardList,
-  Save
-} from 'lucide-react';
+import {Calendar,Clock,MapPin,Plus,Loader2,X,Users,CheckCircle,AlertCircle,ClipboardList,Save} from 'lucide-react';
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from 'date-fns/locale/es';
 import { useAuth } from '@/app/context/AuthContext';
 import Swal from 'sweetalert2';
-import { useJsApiLoader, GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
 import { useRef  } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { grupoService } from '@/app/services/grupos';
 
 
 registerLocale('es', es);
@@ -170,12 +158,6 @@ export default function EventosPage() {
   const [loading, setLoading] = useState(true);
   const [filtroVista, setFiltroVista] = useState<'PROXIMOS' | 'PASADOS'>('PROXIMOS');
 
-  // MAPAS
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
-  const [coordenadas, setCoordenadas] = useState<{lat: number | null, lng: number | null}>({ lat: null, lng: null });
-  const centerDefault = { lat: -8.0561209 , lng: -79.0517475 };
-  const [ubicacion, setUbicacion] = useState("");
-
   // MODAL CREAR EVENTO
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -183,21 +165,43 @@ export default function EventosPage() {
   const [horaInicio, setHoraInicio] = useState("");
   const [horaFin, setHoraFin] = useState("");
 
-  const [tiposEvento, setTiposEvento] = useState<TipoEvento[]>([]);
-  const [loadingTipos, setLoadingTipos] = useState(true);
+  
+// --- NUEVOS ESTADOS PARA EL FORMULARIO ---
+const [dirigidoA, setDirigidoA] = useState<'CONFIRMANTES' | 'CATEQUISTAS'>('CONFIRMANTES');
+const [alcance, setAlcance] = useState<'TODOS' | 'GRUPO'>('TODOS');
+const [grupoId, setGrupoId] = useState("");
+const [ubicacion, setUbicacion] = useState(""); 
 
-  useEffect(() => {
-    const loadTipos = async () => {
-      try {
-        setLoadingTipos(true);
-        const data = await tipoEventoService.getAll();
-        setTiposEvento(data);
-      } finally {
-        setLoadingTipos(false);
-      }
-    };
-    loadTipos();
-  }, []);
+const [tiposEvento, setTiposEvento] = useState<TipoEvento[]>([]);
+const [loadingTipos, setLoadingTipos] = useState(true);
+
+// 👇 ESTADOS ACTIVADOS PARA LOS GRUPOS
+const [grupos, setGrupos] = useState<Grupo[]>([]);
+const [loadingGrupos, setLoadingGrupos] = useState(true);
+
+// 👇 EFECTO MEJORADO: Carga Tipos y Grupos en paralelo
+useEffect(() => {
+  const loadData = async () => {
+    try {
+      setLoadingTipos(true);
+      setLoadingGrupos(true);
+      
+      const [tiposData, gruposData] = await Promise.all([
+        tipoEventoService.getAll(),
+        grupoService.getAllActivos()
+      ]);
+      
+      setTiposEvento(tiposData);
+      setGrupos(gruposData);
+    } catch (error) {
+      console.error("Error al cargar los datos del formulario:", error);
+    } finally {
+      setLoadingTipos(false);
+      setLoadingGrupos(false);
+    }
+  };
+  loadData();
+}, []);
 
   // --- NUEVOS ESTADOS PARA EL CHECKLIST MANUAL ---
   const [isChecklistOpen, setIsChecklistOpen] = useState(false);
@@ -209,13 +213,6 @@ export default function EventosPage() {
   const tzoffset = (new Date()).getTimezoneOffset() * 60000;
   const today = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
   
-  const [libraries] = useState(['places']);
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-    libraries: libraries as any,
-  });
-
   // ========== LÓGICA DE VALIDACIÓN EN TIEMPO REAL ==========
   const ahora = new Date();
   const esHoy = fechaSeleccionada &&
@@ -230,32 +227,6 @@ export default function EventosPage() {
   const errorPasado = esHoy && horaInicio && minHoraInicio && horaInicio < minHoraInicio;
   const errorTiempo = horaInicio && horaFin && horaFin <= horaInicio;
 
-  // ========== FUNCIONES MAPAS Y EVENTOS ==========
-  const handleMapClick = (event: google.maps.MapMouseEvent) => {
-    if (event.latLng) {
-      const lat = event.latLng.lat();
-      const lng = event.latLng.lng();
-      setCoordenadas({ lat, lng });
-
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-        if (status === "OK" && results && results[0]) {
-          setUbicacion(results[0].formatted_address);
-        }
-      });
-    }
-  };
-
-  const onLoad = (autoC: google.maps.places.Autocomplete) => setAutocomplete(autoC);
-  const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      const place = autocomplete.getPlace();
-      if (place.geometry && place.geometry.location) {
-        setCoordenadas({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
-        setUbicacion(place.name || place.formatted_address || "");
-      }
-    }
-  };
 
   const fetchEventos = async () => {
     try {
@@ -306,7 +277,6 @@ export default function EventosPage() {
     setFechaSeleccionada(null);
     setHoraInicio("");
     setHoraFin("");
-    setCoordenadas({ lat: null, lng: null });
     setUbicacion("");
   };
 
@@ -328,11 +298,11 @@ export default function EventosPage() {
       hora_inicio: horaInicio || undefined,
       hora_fin: horaFin || undefined,
       ubicacion: formData.get("ubicacion") as string,
-      latitud: coordenadas.lat, 
-      longitud: coordenadas.lng, 
       descripcion: (formData.get("descripcion") as string) || undefined,
       obligatorio: formData.get("obligatorio") === "on",
-      requiere_confirmacion: false
+      requiere_confirmacion: false,
+      dirigido_a: dirigidoA,
+      grupo_id: alcance === 'GRUPO' && grupoId !== "" ? grupoId : undefined,
     };
 
     try {
@@ -478,6 +448,7 @@ export default function EventosPage() {
   
 
   return (
+    <> 
     <div className="absolute inset-4 md:inset-8 flex flex-col rounded-3xl shadow-sm border border-white/60 bg-[#F9F8F6]/70 backdrop-blur-xl overflow-hidden ring-1 ring-[#E8E2DA]/50 font-sans text-[#211814]">
       
       <header className="flex shrink-0 flex-col gap-4 border-b border-[#E8E2DA]/50 bg-white/40 px-5 sm:px-8 py-5 sm:py-6 lg:flex-row lg:items-center lg:justify-between z-30">
@@ -612,6 +583,8 @@ export default function EventosPage() {
             })}
           </div>
         )}
+      </div>
+      </div>
       </div>
 
 
@@ -781,161 +754,215 @@ export default function EventosPage() {
               <button type="button" onClick={cerrarModal} className="p-2 rounded-full hover:bg-black/5 text-gray-400 transition-colors"><X size={24} /></button>
             </div>
 
-            <form id="form-crear-evento" onSubmit={handleCrearEvento} className="p-6 sm:p-8 space-y-6 overflow-y-auto">
-
+            <form id="form-crear-evento" onSubmit={handleCrearEvento} className="p-6 sm:p-8 space-y-7 overflow-y-auto bg-white">
+              
+              {/* PASO 1: PÚBLICO OBJETIVO (Segmented Control iOS) */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre del Evento <span className="text-red-500">*</span></label>
-                <input required name="nombre" placeholder="Ej. Santa Misa de Apertura" className="w-full bg-[#F9F8F6] border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] focus:ring-1 focus:ring-[#5A431C] transition-all font-medium text-[#211814]" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo de Evento <span className="text-red-500">*</span></label>
-                <select 
-                  required 
-                  name="tipo_id" 
-                  className="w-full bg-[#F9F8F6] border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] font-medium text-[#211814]"
-                >
-                  <option value="">Seleccione un tipo...</option>
-                  {tiposEvento.map(tipo => (
-                    <option key={tipo.id} value={tipo.id}>
-                      {tipo.icono} {tipo.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha <span className="text-red-500">*</span></label>
-                  <DatePicker
-                    selected={fechaSeleccionada}
-                    onChange={(date: Date | null) => setFechaSeleccionada(date)}
-                    dateFormat="dd/MM/yyyy"
-                    locale="es"
-                    minDate={new Date()}
-                    placeholderText="dd/mm/aaaa"
-                    className="w-full bg-[#F9F8F6] border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] focus:ring-1 focus:ring-[#5A431C] transition-all font-medium text-[#211814]"
-                    wrapperClassName="w-full"
-                  />
+                <label className="block text-[11px] font-bold text-[#8B7355] uppercase tracking-wider mb-2.5">1. ¿Para quién es el evento?</label>
+                <div className="flex bg-[#F4F2EE] p-1 rounded-xl border border-[#E8E2DA] shadow-inner">
+                  <button type="button" onClick={() => setDirigidoA('CONFIRMANTES')} className={`flex-1 py-2.5 text-[13px] font-semibold rounded-lg transition-all duration-300 ${dirigidoA === 'CONFIRMANTES' ? 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1)] text-[#5A431C]' : 'text-[#9A8875] hover:text-[#5A431C]'}`}>
+                    Confirmantes
+                  </button>
+                  <button type="button" onClick={() => setDirigidoA('CATEQUISTAS')} className={`flex-1 py-2.5 text-[13px] font-semibold rounded-lg transition-all duration-300 ${dirigidoA === 'CATEQUISTAS' ? 'bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1)] text-[#5A431C]' : 'text-[#9A8875] hover:text-[#5A431C]'}`}>
+                    Catequistas
+                  </button>
                 </div>
-                <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Hora Inicio</label>
-                <select 
-                  name="hora_inicio" 
-                  value={horaInicio}
-                  onChange={(e) => {
-                    setHoraInicio(e.target.value);
-                    setHoraFin(""); // Limpiamos la hora fin si cambian el inicio
-                  }}
-                  disabled={!fechaSeleccionada} // Bloqueado hasta que elijan fecha
-                  className={`w-full bg-[#F9F8F6] border ${errorPasado ? 'border-red-500 text-red-600 focus:ring-red-500' : 'border-[#C0B1A0]/40 focus:border-[#5A431C] focus:ring-[#5A431C]'} rounded-xl px-4 py-3 focus:outline-none focus:ring-1 transition-all font-medium disabled:opacity-50`} 
-                >
-                  <option value="">Seleccione...</option>
-                  {opcionesHoraInicio.map((hora) => (
-                    <option key={hora} value={hora}>{hora}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Hora Fin</label>
-                <select 
-                  name="hora_fin" 
-                  value={horaFin}
-                  onChange={(e) => setHoraFin(e.target.value)}
-                  disabled={!horaInicio} // UX Premium: Bloqueado hasta que elijan inicio
-                  className={`w-full bg-[#F9F8F6] border ${errorTiempo ? 'border-red-500 text-red-600 focus:ring-red-500' : 'border-[#C0B1A0]/40 focus:border-[#5A431C] focus:ring-[#5A431C]'} rounded-xl px-4 py-3 focus:outline-none focus:ring-1 transition-all font-medium disabled:opacity-50`} 
-                >
-                  <option value="">Seleccione...</option>
-                  {opcionesHoraFin.map((hora) => (
-                    <option key={hora} value={hora}>{hora}</option>
-                  ))}
-                </select>
-              </div>
               </div>
 
-              {(errorPasado || errorTiempo) && (
-                <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-bold animate-fade-in">
-                  <AlertCircle size={18} />
-                  {errorPasado ? "La hora de inicio seleccionada ya pasó." : "La hora de término debe ser posterior a la de inicio."}
+              {/* PASO 2: ALCANCE (General vs Grupo) */}
+              <div className="bg-[#FAF8F6] p-4 rounded-[1.25rem] border border-[#E8E2DA]/60 space-y-4">
+                <label className="block text-[11px] font-bold text-[#8B7355] uppercase tracking-wider">2. Alcance del Evento</label>
+                <div className="flex bg-[#EBE5E0]/50 p-1 rounded-xl border border-[#E8E2DA] shadow-inner">
+                  <button type="button" onClick={() => { setAlcance('TODOS'); setGrupoId(""); }} className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-all duration-300 ${alcance === 'TODOS' ? 'bg-white shadow-sm text-[#5A431C]' : 'text-[#9A8875] hover:text-[#5A431C]'}`}>
+                    Todos (General)
+                  </button>
+                  <button type="button" onClick={() => setAlcance('GRUPO')} className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-all duration-300 ${alcance === 'GRUPO' ? 'bg-white shadow-sm text-[#5A431C]' : 'text-[#9A8875] hover:text-[#5A431C]'}`}>
+                    Grupo Específico
+                  </button>
                 </div>
-              )}
 
-              <div className="bg-[#F9F8F6] p-5 rounded-2xl border border-[#C0B1A0]/30 space-y-4">
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Lugar / Dirección <span className="text-red-500">*</span></label>
-                    {isLoaded ? (
-                      <Autocomplete onLoad={onLoad} onPlaceChanged={onPlaceChanged} options={{ componentRestrictions: { country: "pe" } }}>
-                        <input 
-                          required 
-                          type="text" 
-                          name="ubicacion" 
-                          value={ubicacion}
-                          onChange={(e) => setUbicacion(e.target.value)}
-                          placeholder="Ej. Templo Parroquial o Casa de Retiro" 
-                          className="w-full bg-white border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] transition-all font-medium text-[#211814] shadow-sm" 
-                        />
-                      </Autocomplete>
-                    ) : (
-                      <input 
+         
+                {/* Aparece solo si selecciona "Grupo Específico" */}
+                {alcance === 'GRUPO' && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300 mt-4">
+                    <div className="relative group">
+                      <select 
                         required 
-                        type="text" 
-                        name="ubicacion" 
-                        placeholder="Cargando buscador..." 
-                        className="w-full bg-white border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] transition-all font-medium text-[#211814] shadow-sm" 
-                      />
-                    )}
-                  </div>
-                
-                <div>
-                  <label className="flex justify-between items-end mb-2">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ubicación Exacta (GPS)</span>
-                    <span className="text-[10px] text-gray-400 font-medium">Clic en el mapa para fijar</span>
-                  </label>
-                  
-                  {isLoaded ? (
-                    <div className="w-full h-48 rounded-xl overflow-hidden border border-[#C0B1A0]/40 shadow-sm relative">
-                      <GoogleMap 
-                            mapContainerStyle={{ width: '100%', height: '100%' }} 
-                            center={(coordenadas.lat !== null && coordenadas.lng !== null) 
-                              ? { lat: coordenadas.lat, lng: coordenadas.lng } 
-                              : centerDefault
-                            } 
-                            zoom={15} 
-                            onClick={handleMapClick} 
-                            options={{ disableDefaultUI: true, zoomControl: true, streetViewControl: false }}
-                          >
-                            {coordenadas.lat !== null && coordenadas.lng !== null && (
-                              <Marker 
-                                position={{ lat: coordenadas.lat, lng: coordenadas.lng }} 
-                                animation={google.maps.Animation.DROP} 
-                              />
-                            )}
-                          </GoogleMap>
+                        value={grupoId}
+                        onChange={(e) => setGrupoId(e.target.value)}
+                        disabled={loadingGrupos}
+                        className="appearance-none w-full h-[46px] bg-white border border-[#E8E2DA] rounded-[12px] pl-4 pr-10 text-[14px] font-medium text-[#211814] focus:bg-white focus:border-[#5A431C] focus:ring-2 focus:ring-[#5A431C]/15 transition-all shadow-sm outline-none cursor-pointer disabled:opacity-50"
+                      >
+                        <option value="" disabled hidden>
+                          {loadingGrupos ? "Cargando grupos..." : `Seleccione el grupo de ${dirigidoA.toLowerCase()}...`}
+                        </option>
+                        
+                        {/* 👇 RENDERIZADO DINÁMICO DESDE TU BACKEND */}
+                        {!loadingGrupos && grupos.map((grupo) => (
+                          <option key={grupo.id} value={grupo.id}>
+                            {grupo.nombre}
+                          </option>
+                        ))}
+
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-[#A89F91] group-focus-within:text-[#5A431C] transition-colors">
+                        {loadingGrupos ? <Loader2 size={16} className="animate-spin" /> : <ChevronDown size={16} strokeWidth={2.5} />}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="w-full h-48 bg-white rounded-xl flex flex-col items-center justify-center border border-gray-200"><Loader2 className="animate-spin text-[#C0B1A0] mb-2" size={24} /><span className="text-xs text-gray-500">Cargando mapa...</span></div>
-                  )}
+                  </div>
+                )}
 
-                  {coordenadas.lat ? (
-                    <p className="text-[10.5px] text-[#166534] font-bold mt-2 flex items-center gap-1.5 bg-[#166534]/10 p-2 rounded-lg"><CheckCircle size={14} /> Marcador GPS guardado correctamente.</p>
-                  ) : (
-                    <p className="text-[10.5px] text-[#ca8a04] font-bold mt-2 flex items-center gap-1.5 bg-[#ca8a04]/10 p-2 rounded-lg"><MapPin size={14} /> Se requiere fijar un marcador para validar asistencia.</p>
-                  )}
+              </div>
+
+              {/* PASO 3: DETALLES BÁSICOS */}
+              <div className="space-y-5 pt-2">
+                <label className="block text-[11px] font-bold text-[#8B7355] uppercase tracking-wider border-b border-[#E8E2DA] pb-2">3. Detalles del Evento</label>
+                
+                {/* FILA 1: Nombre (2/3) y Tipo (1/3) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* CAMPO NOMBRE */}
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">Nombre <span className="text-red-500">*</span></label>
+                    <input 
+                      required 
+                      name="nombre" 
+                      placeholder="Ej. Retiro de Pascua" 
+                      className="w-full h-[46px] bg-[#F4F2EE] border border-[#E8E2DA] rounded-[12px] px-4 text-[14px] font-medium text-[#211814] focus:bg-white focus:border-[#5A431C] focus:ring-2 focus:ring-[#5A431C]/15 transition-all shadow-sm outline-none placeholder:text-[#A89F91]" 
+                    />
+                  </div>
+
+                  {/* CAMPO TIPO */}
+                  <div className="md:col-span-1">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">Tipo <span className="text-red-500">*</span></label>
+                    <div className="relative group">
+                      <select 
+                        required 
+                        name="tipo_id" 
+                        className="appearance-none w-full h-[46px] bg-[#F4F2EE] border border-[#E8E2DA] rounded-[12px] pl-4 pr-10 text-[14px] font-medium text-[#211814] focus:bg-white focus:border-[#5A431C] focus:ring-2 focus:ring-[#5A431C]/15 transition-all shadow-sm outline-none cursor-pointer"
+                      >
+                        <option value="" disabled hidden>Seleccione...</option>
+                        {tiposEvento.map(tipo => (<option key={tipo.id} value={tipo.id}>{tipo.icono} {tipo.nombre}</option>))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-[#A89F91] group-focus-within:text-[#5A431C] transition-colors">
+                        <ChevronDown size={16} strokeWidth={2.5} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Descripción (Opcional)</label>
-                <textarea name="descripcion" rows={2} placeholder="Agrega notas o detalles importantes..." className="w-full bg-[#F9F8F6] border border-[#C0B1A0]/40 rounded-xl px-4 py-3 focus:outline-none focus:border-[#5A431C] transition-all font-medium text-[#211814] resize-none"></textarea>
-              </div>
+                {/* FILA 2: Fecha, Inicio y Fin (1/3 cada uno) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* CAMPO FECHA */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 text-center">Fecha <span className="text-red-500">*</span></label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#A89F91] group-focus-within:text-[#5A431C] transition-colors z-10">
+                        <Calendar size={16} strokeWidth={2.5} />
+                      </div>
+                      <DatePicker 
+                        selected={fechaSeleccionada} 
+                        onChange={(date: Date | null) => setFechaSeleccionada(date)} 
+                        dateFormat="dd/MM/yyyy" 
+                        locale="es" 
+                        minDate={new Date()} 
+                        placeholderText="Seleccionar" 
+                        className="w-full h-[46px] bg-[#F4F2EE] border border-[#E8E2DA] rounded-[12px] px-10 text-center text-[14px] font-medium text-[#211814] focus:bg-white focus:border-[#5A431C] focus:ring-2 focus:ring-[#5A431C]/15 transition-all shadow-sm outline-none cursor-pointer placeholder:font-medium placeholder:text-[#A89F91]" 
+                        wrapperClassName="w-full" 
+                        popperClassName="apple-datepicker-popper"
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-3 p-4 bg-[#ca8a04]/5 border border-[#ca8a04]/20 rounded-xl hover:bg-[#ca8a04]/10 transition-colors">
-                <input type="checkbox" name="obligatorio" id="obligatorio" className="w-5 h-5 text-[#5A431C] rounded border-[#C0B1A0] focus:ring-[#5A431C] cursor-pointer" />
-                <label htmlFor="obligatorio" className="text-sm font-bold text-[#ca8a04] cursor-pointer select-none flex-1">
-                  Marcar este evento como de asistencia obligatoria
-                </label>
-              </div>
+                  {/* CAMPO HORA INICIO */}
+                  <div className="relative">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 text-center">Hora Inicio</label>
+                    <div className="relative group">
+                      <select 
+                        name="hora_inicio" 
+                        value={horaInicio} 
+                        onChange={(e) => { setHoraInicio(e.target.value); setHoraFin(""); }} 
+                        disabled={!fechaSeleccionada} 
+                        className={`appearance-none w-full h-[46px] bg-[#F4F2EE] border border-[#E8E2DA] rounded-[12px] px-8 text-center text-[14px] font-medium focus:bg-white focus:border-[#5A431C] focus:ring-2 focus:ring-[#5A431C]/15 transition-all cursor-pointer shadow-sm outline-none disabled:opacity-50 disabled:cursor-not-allowed ${horaInicio ? 'text-[#211814]' : 'text-[#A89F91]'} ${errorPasado ? '!border-red-500 !bg-red-50 text-red-600' : ''}`}
+                      >
+                        <option value="" disabled hidden>-- : --</option>
+                        {opcionesHoraInicio.map((hora) => (<option key={hora} value={hora}>{hora}</option>))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-[#A89F91] group-focus-within:text-[#5A431C] transition-colors">
+                        <ChevronDown size={16} strokeWidth={2.5} />
+                      </div>
+                    </div>
+                  </div>
 
+                  {/* CAMPO HORA FIN */}
+                  <div className="relative">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 text-center">Hora Fin</label>
+                    <div className="relative group">
+                      <select 
+                        name="hora_fin" 
+                        value={horaFin} 
+                        onChange={(e) => setHoraFin(e.target.value)} 
+                        disabled={!horaInicio} 
+                        className={`appearance-none w-full h-[46px] bg-[#F4F2EE] border border-[#E8E2DA] rounded-[12px] px-8 text-center text-[14px] font-medium focus:bg-white focus:border-[#5A431C] focus:ring-2 focus:ring-[#5A431C]/15 transition-all cursor-pointer shadow-sm outline-none disabled:opacity-50 disabled:cursor-not-allowed ${horaFin ? 'text-[#211814]' : 'text-[#A89F91]'} ${errorTiempo ? '!border-red-500 !bg-red-50 text-red-600' : ''}`}
+                      >
+                        <option value="" disabled hidden>-- : --</option>
+                        {opcionesHoraFin.map((hora) => (<option key={hora} value={hora}>{hora}</option>))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-[#A89F91] group-focus-within:text-[#5A431C] transition-colors">
+                        <ChevronDown size={16} strokeWidth={2.5} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {(errorPasado || errorTiempo) && (
+                  <div className="bg-red-50/80 text-red-600 px-4 py-3 rounded-xl flex items-center gap-2 text-[12px] font-semibold animate-in fade-in duration-200">
+                    <AlertCircle size={16} />
+                    {errorPasado ? "La hora de inicio seleccionada ya pasó." : "La hora de término debe ser posterior a la de inicio."}
+                  </div>
+                )}
+
+                {/* FILA 3: Ubicación (Ancho completo 100%) */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">Ubicación <span className="text-red-500">*</span></label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#A89F91] group-focus-within:text-[#5A431C] transition-colors">
+                      <MapPin size={16} strokeWidth={2.5} />
+                    </div>
+                    <input 
+                      required 
+                      name="ubicacion" 
+                      value={ubicacion} 
+                      onChange={(e) => setUbicacion(e.target.value)} 
+                      placeholder="Ej. Templo Parroquial o Salón 3" 
+                      className="w-full h-[46px] bg-[#F4F2EE] border border-[#E8E2DA] rounded-[12px] pl-10 pr-4 text-[14px] font-medium text-[#211814] focus:bg-white focus:border-[#5A431C] focus:ring-2 focus:ring-[#5A431C]/15 transition-all shadow-sm outline-none placeholder:text-[#A89F91]" 
+                    />
+                  </div>
+                </div>
+
+                {/* FILA 4: Descripción */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 pl-1">Descripción (Opcional)</label>
+                  <textarea 
+                    name="descripcion" 
+                    rows={2} 
+                    placeholder="Notas o detalles importantes..." 
+                    className="w-full bg-[#F4F2EE] border border-[#E8E2DA] rounded-[12px] px-4 py-3 text-[14px] font-medium text-[#211814] focus:bg-white focus:border-[#5A431C] focus:ring-2 focus:ring-[#5A431C]/15 transition-all shadow-sm outline-none placeholder:text-[#A89F91] resize-none"
+                  ></textarea>
+                </div>
+
+                {/* FILA 5: Asistencia Obligatoria */}
+                <div className="flex items-center justify-between p-4 bg-[#F9F8F6] rounded-[12px] border border-[#E8E2DA]">
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#211814]">Asistencia Obligatoria</p>
+                    <p className="text-[11px] text-[#8B7355]">Afecta el porcentaje final del usuario</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="obligatorio" className="sr-only peer" />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5A431C]"></div>
+                  </label>
+                </div>
+
+              </div>
             </form>
 
             <div className="p-5 sm:px-8 border-t border-gray-100 bg-white flex gap-4 shrink-0">
@@ -950,7 +977,7 @@ export default function EventosPage() {
           </div>
         </div>
       )}
-    </div>
-    </div>
+
+    </>
   );
 }

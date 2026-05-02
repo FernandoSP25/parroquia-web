@@ -290,3 +290,13 @@ export interface AsistenciaUpdate {
 export interface AsistenciaMasivaPayload {
   asistencias: AsistenciaUpdate[];
 }
+
+
+export interface Grupo {
+  id: string;
+  nombre: string;
+  descripcion?: string | null;
+  capacidad_maxima: number;
+  anio_id: string;
+  activo: boolean;
+}

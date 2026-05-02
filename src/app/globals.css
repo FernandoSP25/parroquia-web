@@ -54,3 +54,62 @@ body {
 .hero-scroll {
   animation: heroScroll 18s linear infinite;
 }
+
+/* --- ESTILOS APPLE PARA EL DATEPICKER --- */
+.apple-datepicker-popper .react-datepicker {
+  font-family: inherit;
+  border: 1px solid rgba(232, 226, 218, 0.8);
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05);
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  padding: 8px;
+}
+
+.apple-datepicker-popper .react-datepicker__header {
+  background-color: transparent;
+  border-bottom: none;
+  padding-top: 8px;
+}
+
+.apple-datepicker-popper .react-datepicker__current-month {
+  font-weight: 700;
+  color: #211814;
+  text-transform: capitalize;
+}
+
+.apple-datepicker-popper .react-datepicker__day-name {
+  color: #8B7355;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.apple-datepicker-popper .react-datepicker__day {
+  color: #211814;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.apple-datepicker-popper .react-datepicker__day:hover {
+  background-color: #F4F2EE;
+  color: #5A431C;
+}
+
+.apple-datepicker-popper .react-datepicker__day--selected,
+.apple-datepicker-popper .react-datepicker__day--keyboard-selected {
+  background-color: #5A431C !important;
+  color: white !important;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+.apple-datepicker-popper .react-datepicker__day--disabled {
+  color: #C0B1A0;
+  opacity: 0.5;
+}
+
+/* Ocultar el triangulito feo de arriba */
+.apple-datepicker-popper .react-datepicker__triangle {
+  display: none;
+}

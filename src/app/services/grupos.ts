@@ -1,9 +1,12 @@
 // src/app/services/grupos.ts
 import api from "./api"; // Tu instancia de axios configurada
-import { TableroData, MoverConfirmanteDTO } from "@/app/types";
+import { TableroData, MoverConfirmanteDTO, Grupo} from "@/app/types";
 
 export const grupoService = {
-  
+  getAllActivos: async (): Promise<Grupo[]> => {
+    const { data } = await api.get<Grupo[]>("/grupos/activos");
+    return data;
+  },
   // 1. Obtener el tablero completo
   getTablero: async (anioId: string): Promise<TableroData> => {
     const { data } = await api.get<TableroData>(`/grupos/tablero/${anioId}`);
