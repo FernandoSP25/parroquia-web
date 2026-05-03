@@ -120,7 +120,7 @@ export default function AsistenciaCatequistaPage() {
     try {
       setLoading(true);
       // Trae los eventos programados
-      const data = await eventoService.getAll();
+      const data = await eventoService.getProximos();
       
       const filtrados = data.filter(e => {
         const terminado = isEventoFinalizado(e.fecha, e.hora_fin);

@@ -135,40 +135,32 @@ export default function MatrizAsistenciaPage() {
   const [listaModo, setListaModo] = useState<ListaModo>('confirmantes');
   const [loading, setLoading] = useState(true);
 
+  const [grupoSeleccionadoId, setGrupoSeleccionadoId] = useState<string | undefined>(undefined);
+
   // 👇 Estados reales conectados al backend
   const [eventos, setEventos] = useState<EventoMatriz[]>([]);
   const [personas, setPersonas] = useState<PersonaMatriz[]>([]);
   const [asistencias, setAsistencias] = useState<RegistroAsistenciaMatriz[]>([]);
 
-  // 👇 LÓGICA DE CONEXIÓN CON LA API
   const cargarDatosLista = useCallback(async () => {
     if (!tipoActual) return;
-    
     setLoading(true);
     try {
       let data;
-      // Llamamos a un endpoint u otro según el switch estilo Apple
       if (listaModo === 'confirmantes') {
-        data = await asistenciaService.getMatrizConfirmantes(tipoActual.id);
+        data = await asistenciaService.getMatrizConfirmantes(tipoActual.id, grupoSeleccionadoId); // Pasamos el filtro
       } else {
-        data = await asistenciaService.getMatrizCatequistas(tipoActual.id);
+        data = await asistenciaService.getMatrizCatequistas(tipoActual.id, grupoSeleccionadoId);
       }
-
-      // Llenamos la tabla con la data real
       setEventos(data.eventos || []);
       setPersonas(data.personas || []);
       setAsistencias(data.asistencias || []);
-      
     } catch (error) {
-      console.error('Error al cargar la matriz de asistencias:', error);
-      // Limpiamos la tabla si hay error
-      setEventos([]);
-      setPersonas([]);
-      setAsistencias([]);
+      console.error(error);
     } finally {
       setLoading(false);
     }
-  }, [listaModo, tipoActual]);
+  }, [listaModo, tipoActual, grupoSeleccionadoId]); // Dependencia agregada
 
   useEffect(() => {
     if (tipoSlug) void cargarDatosLista();
@@ -286,7 +278,7 @@ export default function MatrizAsistenciaPage() {
       {/* CONTENEDOR DE LA TABLA MATRIZ */}
       <div className="min-h-0 flex-1 flex flex-col bg-white/40">
           <div className="custom-scrollbar flex-1 overflow-auto bg-transparent">
-          <table className="w-full border-collapse table-auto text-left text-sm">
+          <table className="w-full min-w-max border-collapse text-left text-sm">
               <thead className="sticky top-0 z-[40] bg-white/80 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-[#8B7355] shadow-[0_1px_0_rgba(232,226,218,0.5)]">
               <tr>
                 <th

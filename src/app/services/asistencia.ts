@@ -15,13 +15,15 @@ export const asistenciaService = {
     return data;
   },
 
-  getMatrizConfirmantes: async (tipoId: number | string): Promise<MatrizResponse> => {
-    const { data } = await api.get<MatrizResponse>(`/asistencias/matriz/confirmantes/${tipoId}`);
+  getMatrizConfirmantes: async (tipoId: number, grupoId?: string) => {
+    const url = grupoId ? `/asistencias/matriz/confirmantes/${tipoId}?grupo_id=${grupoId}` : `/asistencias/matriz/confirmantes/${tipoId}`;
+    const { data } = await api.get(url);
     return data;
   },
 
-  getMatrizCatequistas: async (tipoId: number | string): Promise<MatrizResponse> => {
-    const { data } = await api.get<MatrizResponse>(`/asistencias/matriz/catequistas/${tipoId}`);
+  getMatrizCatequistas: async (tipoId: number ,grupoId?: string): Promise<MatrizResponse> => {
+    const url = grupoId ? `/asistencias/matriz/catequistas/${tipoId}?grupo_id=${grupoId}` : `/asistencias/matriz/confirmantes/${tipoId}`;
+    const { data } = await api.get(url);
     return data;
   }
 };
